@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Rätselbuch</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Rätselbuch">
+<meta name="theme-color" content="#FFF3D6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="home" class="screen">
+  <header class="bar">
+    <div class="left"><button id="sound" class="round" aria-label="Ton an oder aus">🔊</button><button id="level" class="pill" aria-label="Schwierigkeit umschalten"></button></div>
+    <h1>Rätselbuch</h1>
+    <div class="stars"><span>⭐</span><b class="starcount">0</b></div>
+  </header>
+  <div id="tiles"></div>
+  <div id="garage" aria-label="Garage"></div>
+</section>
+
+<section id="play" class="screen" hidden>
+  <header class="bar">
+    <button id="back" class="round" aria-label="Zurück zur Übersicht">🏠</button>
+    <button id="again" class="pill" aria-label="Aufgabe vorlesen"><span>🔊</span><span id="task"></span></button>
+    <div class="stars"><span>⭐</span><b class="starcount">0</b></div>
+  </header>
+  <main id="stage"></main>
+  <div id="cheer" hidden>
+    <div id="prize"></div>
+    <button id="next" aria-label="Nächstes Rätsel">➡️</button>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

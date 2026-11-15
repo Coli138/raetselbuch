@@ -148,6 +148,17 @@ b { font-weight: 700; }
 .frage svg { width: 9vmin; height: 9vmin; }
 .lager { width: min(92vw, calc((100vh - 62vmin) * 400 / 240)); aspect-ratio: 400 / 240; border: var(--line) solid var(--ink); }
 
+/* ---------- Bauen ---------- */
+#brett { flex: 1; min-height: 0; padding: 1.5vmin; touch-action: none; }
+#teile { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 1vmin; padding: 1.5vmin 2vmin calc(1.5vmin + env(safe-area-inset-bottom)); border-top: var(--line) solid var(--ink); }
+#teile button { --s: min(8.4vmin, calc((100vw - 4vmin) / 10 - 1vmin)); width: var(--s); height: var(--s); border: .4vmin solid var(--soft); background: #fff; }
+#teile button.sel { border-color: var(--ink); outline: .9vmin solid var(--yellow); outline-offset: -1.3vmin; }
+#teile.aus { opacity: .3; }
+#plaetze .btn.sel { background: var(--ink); color: var(--bg); }
+#bau .go { background: var(--green); border-color: var(--green); }
+#bau .go.stop { background: var(--red); border-color: var(--red); }
+#leeren.sicher { background: var(--red); border-color: var(--red); }
+
 /* ---------- Belohnung ---------- */
 #cheer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 5vmin; padding: 2.5vmin 3vmin calc(2.5vmin + env(safe-area-inset-bottom)); background: var(--yellow); border-top: var(--line) solid var(--ink); animation: rise .25s; }
 #prize { display: flex; align-items: center; gap: 2.5vmin; font-size: 3.6vmin; font-weight: 700; animation: pop .5s; }

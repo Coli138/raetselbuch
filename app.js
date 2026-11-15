@@ -514,20 +514,192 @@ function start(m) {
   nextPuzzle();
 }
 
+/* ---------- Bauen: Gleise, Strassen und Stadt frei auf ein Raster legen, dann fahren Lok und Autos ---------- */
+// Seiten eines Feldes: 0 oben, 1 rechts, 2 unten, 3 links. Jedes Teil ist für Drehung 0 gezeichnet.
+const BW = 12, BH = 8, GRAU = '#b9b5aa';
+const linie = (d, f, w, extra) => `<path d="${d}" fill="none" stroke="${f}" stroke-width="${w}"${extra || ''}/>`;
+const SCHWELLEN = [10, 30, 50, 70, 90].map(x => `M${x} 36V64`).join('');
+const BOGEN = 'M0 50A50 50 0 0 1 50 100';
+const BOGENSCHWELLEN = [-75, -45, -15].map(g => { const a = g * Math.PI / 180, c = Math.cos(a), s = Math.sin(a); return `M${36 * c} ${100 + 36 * s}L${64 * c} ${100 + 64 * s}`; }).join('');
+const gleis = f => linie(SCHWELLEN, f || T, 5) + linie('M0 50H100', f || T, 7);
+const gleisbogen = f => linie(BOGENSCHWELLEN, f || T, 5) + linie(BOGEN, f || T, 7);
+const strich = ' stroke-dasharray="12 13" stroke-dashoffset="6"';
+const fenster = (xs, ys, w, h) => ys.flatMap(y => xs.map(x => box(x, y, w, h, P))).join('');
+const TEILE = {
+  gerade: { gleis: [[3, 1]], bild: () => gleis() },
+  kurve: { gleis: [[3, 2]], bild: () => gleisbogen() },
+  kreuzung: { gleis: [[3, 1], [0, 2]], bild: () => gleis() + `<g transform="rotate(90 50 50)">${gleis()}</g>` },
+  // Weiche: von links kommend geht es je nach Stellung geradeaus oder nach unten
+  weiche: { gleis: [[3, 1], [3, 2]], weiche: true, bild: s => s ? gleis(GRAU) + gleisbogen() : gleisbogen(GRAU) + gleis() },
+  bahnhof: { gleis: [[3, 1]], bild: () => box(8, 6, 84, 22, C.gelb) + box(8, 0, 84, 8, T) + box(40, 10, 20, 14, C.rot) + gleis() },
+  tunnel: { gleis: [[3, 1]], bild: () => gleis(), drueber: `<path d="M22 86V46A28 28 0 0 1 78 46V86Z" fill="${T}"/>` + box(40, 8, 20, 10, C.rot) },
+  bruecke: { gleis: [[3, 1]], bild: () => box(0, 0, 100, 100, C.blau) + linie('M8 16H40M58 86H92', P, 5) + box(0, 30, 100, 40, P) + gleis() + box(0, 26, 100, 6, C.gelb) + box(0, 68, 100, 6, C.gelb) },
+  uebergang: { gleis: [[3, 1]], strasse: [[0, 2]], bild: () => linie('M50 0V100', T, 40) + gleis() + linie('M30 50H70', P, 7) + linie('M50 36V64', P, 5) + box(14, 14, 8, 8, C.rot) + box(78, 78, 8, 8, C.rot) },
+  strasse: { strasse: [[3, 1]], bild: () => linie('M0 50H100', T, 40) + linie('M0 50H100', P, 4, strich) },
+  skurve: { strasse: [[3, 2]], bild: () => linie(BOGEN, T, 40) + linie(BOGEN, P, 4, ' stroke-dasharray="12 14" stroke-dashoffset="6"') },
+  skreuz: { strasse: [[3, 1], [0, 2], [3, 0], [0, 1], [1, 2], [2, 3]], bild: () => linie('M0 50H100M50 0V100', T, 40) },
+  // Stadt und Landschaft: nochmals antippen wechselt die Ausführung
+  haus: { arten: 3, bild: s => box(20, 46, 60, 42, C[['rot', 'blau', 'gelb'][s]]) + poly('10,46 50,12 90,46', T) + box(44, 62, 14, 26, P) },
+  hochhaus: { arten: 3, bild: s => box(26, 8, 48, 80, C[['blau', 'rot', 'tinte'][s]]) + fenster([34, 54], [16, 32, 48, 64], 12, 9) },
+  fabrik: { arten: 2, bild: s => box(70, 10, 12, 44, T) + poly('10,54 10,34 36,54 36,34 62,54', C[['rot', 'blau'][s]]) + box(10, 54, 80, 34, C[['rot', 'blau'][s]]) + fenster([20, 44, 68], [64], 12, 12) },
+  baum: { arten: 3, bild: s => box(46, 56, 8, 32, T) + [`<circle cx="50" cy="38" r="26" fill="${C.gruen}"/>`, poly('50,8 80,62 20,62', C.gruen), `<circle cx="34" cy="44" r="18" fill="${C.gruen}"/><circle cx="64" cy="38" r="22" fill="${C.gruen}"/>`][s] },
+  wasser: { arten: 2, bild: s => box(0, 0, 100, 100, C.blau) + (s ? '' : linie('M12 30H48M52 60H88M20 84H44', P, 5)) },
+  wiese: { arten: 3, bild: s => box(0, 0, 100, 100, C.gruen) + (s === 1 ? `<circle cx="28" cy="34" r="7" fill="${C.gelb}"/><circle cx="68" cy="62" r="7" fill="${C.gelb}"/><circle cx="40" cy="78" r="7" fill="${P}"/>` : s === 2 ? `<circle cx="50" cy="50" r="30" fill="${C.gelb}"/>` : '') },
+};
+const TEILNAMEN = Object.keys(TEILE);
+const BAU = { id: 'bauen', title: 'bauen', color: 'tinte', icon: box(10, 56, 80, 30, P) + box(20, 26, 26, 30, C.gelb) + poly('52,56 71,20 90,56', C.rot) };
+
+const bau = $('#bau'), brett = $('#brett'), palette = $('#teile');
+let B = { cur: 0, plots: [0, 1, 2, 3].map(() => Array(BW * BH).fill(null)) };
+try { const alt = JSON.parse(localStorage.getItem('raetselbuch-bau')); if (alt && alt.plots.length === 4 && alt.plots.every(p => p.length === BW * BH)) B = alt; } catch (e) {}
+const bauSave = () => { try { localStorage.setItem('raetselbuch-bau', JSON.stringify(B)); } catch (e) {} };
+let werkzeug = 'gerade', faehrt = false, fahrer = [], bauLauf = 0;
+const feld = () => B.plots[B.cur];
+
+function seiten(c, m) { return c && TEILE[c[0]] && TEILE[c[0]][m] ? TEILE[c[0]][m].map(([a, b]) => [(a + c[1]) % 4, (b + c[1]) % 4]) : []; }
+function nachbar(i, s) { const x = i % BW + [0, 1, 0, -1][s], y = Math.floor(i / BW) + [-1, 0, 1, 0][s]; return x < 0 || y < 0 || x >= BW || y >= BH ? -1 : y * BW + x; }
+const offen = (i, m, s) => i >= 0 && seiten(feld()[i], m).some(p => p.includes(s));
+// Wohin geht es von der Einfahrtseite aus? Bevorzugt dorthin, wo es weitergeht.
+function ausfahrt(i, m, ein) {
+  const c = feld()[i];
+  let aus = seiten(c, m).filter(p => p.includes(ein)).map(p => p[0] === ein ? p[1] : p[0]);
+  if (TEILE[c[0]].weiche && ein === (3 + c[1]) % 4) aus = [((c[2] ? 2 : 1) + c[1]) % 4];
+  const gut = aus.filter(s => offen(nachbar(i, s), m, (s + 2) % 4));
+  const wahl = gut.length ? gut : aus;
+  return wahl.length ? wahl[rnd(wahl.length)] : -1;
+}
+const MITTE = [[50, 0], [100, 50], [50, 100], [0, 50]];
+function punkt(a, b, t) {
+  const [x1, y1] = MITTE[a], [x2, y2] = MITTE[b];
+  if ((a + 2) % 4 === b) return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t];
+  // Bogen um die gemeinsame Ecke
+  const ex = a % 2 ? x1 : x2, ey = a % 2 ? y2 : y1, w1 = Math.atan2(y1 - ey, x1 - ex);
+  let d = Math.atan2(y2 - ey, x2 - ex) - w1;
+  if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI;
+  return [ex + 50 * Math.cos(w1 + d * t), ey + 50 * Math.sin(w1 + d * t)];
+}
+
+function zeichneBrett() {
+  let raster = '';
+  for (let x = 1; x < BW; x++) raster += `M${x * 100} 0V${BH * 100}`;
+  for (let y = 1; y < BH; y++) raster += `M0 ${y * 100}H${BW * 100}`;
+  let teile = '', drueber = '';
+  feld().forEach((c, i) => {
+    if (!c || !TEILE[c[0]]) return;
+    const d = TEILE[c[0]], t = `translate(${i % BW * 100} ${Math.floor(i / BW) * 100})` + (d.arten ? '' : ` rotate(${c[1] * 90} 50 50)`);
+    teile += `<g transform="${t}">${d.bild(d.arten ? c[1] % d.arten : c[2])}</g>`;
+    if (d.drueber) drueber += `<g transform="${t}">${d.drueber}</g>`;
+  });
+  brett.innerHTML = svg(box(0, 0, BW * 100, BH * 100, '#fff') + linie(raster, '#e4e1d6', 2) + teile + '<g id="fahrer"></g>' + drueber + `<rect width="${BW * 100}" height="${BH * 100}" fill="none" stroke="${T}" stroke-width="6"/>`, '', `-3 -3 ${BW * 100 + 6} ${BH * 100 + 6}`);
+}
+function zeichneLeiste() {
+  $('#plaetze').innerHTML = B.plots.map((p, i) => `<button class="btn${i === B.cur ? ' sel' : ''}" data-i="${i}" aria-label="Bauplatz ${i + 1}">${i + 1}</button>`).join('');
+  $('#los').innerHTML = svg(faehrt ? box(22, 22, 56, 56, P) : ICON.los);
+  $('#los').classList.toggle('stop', faehrt);
+  palette.classList.toggle('aus', faehrt);
+  palette.querySelectorAll('button').forEach(b => b.classList.toggle('sel', b.dataset.t === werkzeug));
+}
+
+// Setzen: leeres oder anderes Feld bekommt das Teil; dasselbe Teil nochmals antippen dreht es bzw. wechselt die Ausführung
+function setze(i, neu) {
+  const f = feld(), c = f[i];
+  if (werkzeug === 'weg') { if (!c) return; f[i] = null; }
+  else if (c && c[0] === werkzeug) { if (!neu) return; c[1] = (c[1] + 1) % (TEILE[werkzeug].arten || 4); }
+  else f[i] = [werkzeug, 0, 0];
+  tone(werkzeug === 'weg' ? 300 : 520, 0, .05); bauSave(); zeichneBrett();
+}
+function zelle(e) {
+  const s = brett.firstChild, q = new DOMPoint(e.clientX, e.clientY).matrixTransform(s.getScreenCTM().inverse());
+  const x = Math.floor(q.x / 100), y = Math.floor(q.y / 100);
+  return x < 0 || y < 0 || x >= BW || y >= BH ? -1 : y * BW + x;
+}
+let zieht = false, letzte = -1;
+brett.addEventListener('pointerdown', e => {
+  const i = zelle(e);
+  if (i < 0) return;
+  if (faehrt) { // während der Fahrt stellt Antippen die Weichen
+    const c = feld()[i];
+    if (c && TEILE[c[0]].weiche) { c[2] = c[2] ? 0 : 1; tone(600, 0, .06); bauSave(); zeichneBrett(); zeichneFahrer(); }
+    return;
+  }
+  zieht = true; letzte = i; setze(i, true);
+});
+brett.addEventListener('pointermove', e => { if (!zieht || faehrt) return; const i = zelle(e); if (i >= 0 && i !== letzte) { letzte = i; setze(i, false); } });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(n => brett.addEventListener(n, () => { zieht = false; }));
+
+// Fahren: an jedem Bahnhof startet eine Lok (sonst eine auf dem ersten Gleis), auf den Strassen bis zu zwei Autos
+function zeichneFahrer() {
+  const g = brett.querySelector('#fahrer');
+  if (!g) return;
+  g.innerHTML = fahrer.map(v => `<g transform="translate(${v.x} ${v.y})"><g transform="translate(-32 -44) scale(.64)"><g${v.rechts === v.linksbild ? ' transform="translate(100 0) scale(-1 1)"' : ''}>${v.bild}</g></g></g>`).join('');
+}
+function losfahren() {
+  const f = feld(), mit = m => f.map((c, i) => seiten(c, m).length ? i : -1).filter(i => i >= 0);
+  const gleise = mit('gleis'), strassen = mit('strasse'), bahnhoefe = gleise.filter(i => f[i][0] === 'bahnhof').slice(0, 3);
+  const neu = (i, m, bild, linksbild) => { const ein = seiten(f[i], m)[0][0]; return { i, m, ein, aus: ausfahrt(i, m, ein), t: .5, bild, linksbild, rechts: true, x: 0, y: 0 }; };
+  fahrer = (bahnhoefe.length ? bahnhoefe : gleise.slice(0, 1)).map((i, k) => neu(i, 'gleis', FAHRZEUGE[2].bild(C[['blau', 'rot', 'gruen'][k]]), true));
+  if (strassen.length) fahrer.push(neu(strassen[0], 'strasse', FAHRZEUGE[0].bild(C.rot), false));
+  if (strassen.length > 5) fahrer.push(neu(strassen[strassen.length - 1], 'strasse', FAHRZEUGE[1].bild(C.gelb), false));
+  if (!fahrer.length) { no(); wobble(brett); return; }
+  faehrt = true; zeichneLeiste(); tone(392, 0, .18, 'triangle', .1); tone(392, .25, .3, 'triangle', .1);
+  const lauf = ++bauLauf;
+  let zuvor = performance.now();
+  const bild = jetzt => {
+    if (lauf !== bauLauf || !faehrt) return;
+    const dt = Math.min(.1, (jetzt - zuvor) / 1000); zuvor = jetzt;
+    fahrer.forEach(v => {
+      if (v.aus < 0) { [v.x, v.y] = [v.i % BW * 100 + 50, Math.floor(v.i / BW) * 100 + 50]; return; }
+      v.t += dt * (v.m === 'gleis' ? 1.9 : 2.3);
+      while (v.t >= 1) {
+        v.t -= 1;
+        const n = nachbar(v.i, v.aus);
+        // Geht es weiter, ins nächste Feld; sonst am Ende wenden
+        if (offen(n, v.m, (v.aus + 2) % 4)) { v.i = n; v.ein = (v.aus + 2) % 4; } else v.ein = v.aus;
+        v.aus = ausfahrt(v.i, v.m, v.ein);
+        if (v.aus < 0) break;
+      }
+      if (v.aus < 0) return;
+      const [px, py] = punkt(v.ein, v.aus, v.t), x = v.i % BW * 100 + px, y = Math.floor(v.i / BW) * 100 + py;
+      if (Math.abs(x - v.x) > .5) v.rechts = x > v.x;
+      v.x = x; v.y = y;
+    });
+    zeichneFahrer();
+    requestAnimationFrame(bild);
+  };
+  requestAnimationFrame(bild);
+}
+function anhalten() { faehrt = false; bauLauf++; fahrer = []; zeichneFahrer(); zeichneLeiste(); }
+
+palette.innerHTML = TEILNAMEN.map(t => `<button data-t="${t}" aria-label="${t}">${svg(TEILE[t].bild(0) + (TEILE[t].drueber || ''))}</button>`).join('') + `<button data-t="weg" aria-label="entfernen">${svg(ICON.weg)}</button>`;
+palette.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || faehrt) return; werkzeug = b.dataset.t; tone(520, 0, .05); zeichneLeiste(); });
+$('#plaetze').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; anhalten(); B.cur = +b.dataset.i; bauSave(); zeichneBrett(); zeichneLeiste(); });
+$('#los').addEventListener('click', () => { if (faehrt) anhalten(); else losfahren(); });
+// Leeren braucht zwei Antipper, damit nichts aus Versehen verschwindet
+let leerenBereit = 0;
+$('#leeren').innerHTML = svg(box(20, 30, 60, 58, T) + box(12, 16, 76, 10, T) + box(40, 6, 20, 10, T));
+$('#leeren').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (Date.now() - leerenBereit > 2500) { leerenBereit = Date.now(); b.classList.add('sicher'); setTimeout(() => b.classList.remove('sicher'), 2500); return; }
+  leerenBereit = 0; b.classList.remove('sicher'); anhalten(); B.plots[B.cur] = Array(BW * BH).fill(null); bauSave(); zeichneBrett(); no();
+});
+$('#bauheim').innerHTML = svg(ICON.heim);
+$('#bauheim').addEventListener('click', () => { anhalten(); bau.hidden = true; home.hidden = false; buildMap(); });
+function openBau() { home.hidden = true; bau.hidden = false; zeichneBrett(); zeichneLeiste(); }
+
 // Hauptmenü: eine Insel mit Gleisring. Die Lok fährt zur angetippten Station, dort beginnt das Rätsel.
 const map = $('#map');
 let driving = false, lokAngle = 0;
 function buildMap() {
   const hoch = innerHeight > innerWidth, VW = hoch ? 700 : 1000, VH = hoch ? 1000 : 700, cx = VW / 2, cy = VH / 2;
   const [gx, gy] = hoch ? [176, 310] : [310, 168], [sx, sy] = hoch ? [262, 415] : [415, 268];
-  const ang = i => i / KINDS.length * Math.PI * 2 - Math.PI / 2;
+  const ORTE = [...KINDS, BAU], ang = i => i / ORTE.length * Math.PI * 2 - Math.PI / 2;
   let schwellen = '';
   for (let i = 0; i < 64; i++) {
     const a = i / 64 * Math.PI * 2, x = cx + gx * Math.cos(a), y = cy + gy * Math.sin(a);
     const nx = gy * Math.cos(a), ny = gx * Math.sin(a), nl = Math.hypot(nx, ny) / 13;
     schwellen += `M${x - nx / nl} ${y - ny / nl}L${x + nx / nl} ${y + ny / nl}`;
   }
-  const stations = KINDS.map((k, i) => {
+  const stations = ORTE.map((k, i) => {
     const a = ang(i), x = cx + sx * Math.cos(a), y = cy + sy * Math.sin(a), oben = Math.sin(a) < -.01;
     return `<g class="station" data-i="${i}" transform="translate(${x - 48} ${y - 48})">${box(0, 0, 96, 96, C[k.color])}<svg x="12" y="12" width="72" height="72" viewBox="0 0 100 100">${k.icon}</svg><text x="48" y="${oben ? -10 : 119}">${k.title}</text></g>`;
   }).join('');
@@ -550,7 +722,7 @@ function buildMap() {
     lok.setAttribute('transform', `translate(${cx + gx * Math.cos(a)} ${cy + gy * Math.sin(a)})`);
     body.setAttribute('transform', rechts ? 'translate(100 0) scale(-1 1)' : '');
   };
-  put(ang(S.at % KINDS.length), true);
+  put(ang(S.at % ORTE.length), true);
   const drive = (to, then) => {
     const from = lokAngle, dur = Math.min(2600, 350 + Math.abs(to - from) * 650), t0 = performance.now();
     if (Math.abs(to - from) < .01) return then();
@@ -571,7 +743,7 @@ function buildMap() {
     const i = +g.dataset.i;
     let d = (ang(i) - lokAngle) % (Math.PI * 2);
     if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
-    drive(lokAngle + d, () => { S.at = i; save(); start(KINDS[i]); });
+    drive(lokAngle + d, () => { S.at = i; save(); if (ORTE[i] === BAU) openBau(); else start(ORTE[i]); });
   }));
 }
 $('#back').innerHTML = svg(ICON.heim);
@@ -586,7 +758,7 @@ $('#next').addEventListener('click', nextPuzzle);
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (play.hidden) { if (!driving) buildMap(); } else if (!solved && current) show(current); }, 250);
+  resizeTimer = setTimeout(() => { if (!home.hidden) { if (!driving) buildMap(); } else if (play.hidden) return; else if (!solved && current) show(current); }, 250);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());

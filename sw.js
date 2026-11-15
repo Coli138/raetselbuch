@@ -1,5 +1,5 @@
 // Bei jeder Änderung an der App die Version hochzählen, damit das iPad die neuen Dateien holt.
-const CACHE = 'raetselbuch-v4';
+const CACHE = 'raetselbuch-v5';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

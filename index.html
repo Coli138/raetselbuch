@@ -8,34 +8,34 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Rätselbuch">
-<meta name="theme-color" content="#FFF3D6">
+<meta name="theme-color" content="#faf9f6">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-180.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <section id="home" class="screen">
   <header class="bar">
-    <div class="left"><button id="sound" class="round" aria-label="Ton an oder aus">🔊</button><button id="level" class="pill" aria-label="Schwierigkeit umschalten"></button></div>
-    <h1>Rätselbuch</h1>
-    <div class="stars"><span>⭐</span><b class="starcount">0</b></div>
+    <div class="left"><button id="sound" class="btn" aria-label="Ton an oder aus"></button><button id="level" class="btn wide" aria-label="Schwierigkeit umschalten"></button></div>
+    <h1>rätselbuch</h1>
+    <div class="stars" aria-label="Punkte"><i class="dot"></i><b class="starcount">0</b></div>
   </header>
-  <div id="tiles"></div>
+  <div id="map" aria-label="Insel mit den Rätseln"></div>
   <div id="garage" aria-label="Garage"></div>
 </section>
 
 <section id="play" class="screen" hidden>
   <header class="bar">
-    <button id="back" class="round" aria-label="Zurück zur Übersicht">🏠</button>
-    <button id="again" class="pill" aria-label="Aufgabe vorlesen"><span>🔊</span><span id="task"></span></button>
-    <div class="stars"><span>⭐</span><b class="starcount">0</b></div>
+    <button id="back" class="btn" aria-label="Zurück zur Insel"></button>
+    <div class="aufgabe"><b id="task"></b><span id="hint"></span></div>
+    <div class="stars" aria-label="Punkte"><i class="dot"></i><b class="starcount">0</b></div>
   </header>
   <main id="stage"></main>
   <div id="cheer" hidden>
     <div id="prize"></div>
-    <button id="next" aria-label="Nächstes Rätsel">➡️</button>
+    <button id="next" aria-label="Nächstes Rätsel"></button>
   </div>
 </section>
 

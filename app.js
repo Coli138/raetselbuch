@@ -1,53 +1,55 @@
 'use strict';
 
-/* ---------- Daten ---------- */
-// [Emoji, Name mit Artikel, Mehrzahl]
-const VEHICLES = [
-  ['🚂', 'die Lokomotive', 'Lokomotiven'], ['🚒', 'das Feuerwehrauto', 'Feuerwehrautos'],
-  ['🚜', 'der Traktor', 'Traktoren'], ['✈️', 'das Flugzeug', 'Flugzeuge'],
-  ['🚁', 'der Hubschrauber', 'Hubschrauber'], ['🚗', 'das Auto', 'roten Autos'],
-  ['🚌', 'der Bus', 'Busse'], ['🚓', 'das Polizeiauto', 'Polizeiautos'],
-  ['🚑', 'der Krankenwagen', 'Krankenwagen'], ['🚲', 'das Fahrrad', 'Fahrräder'],
-  ['🚀', 'die Rakete', 'Raketen'], ['⛵', 'das Segelboot', 'Segelboote'],
-  ['🚚', 'der Lastwagen', 'Lastwagen'], ['🚢', 'das Schiff', 'Schiffe'],
-  ['🏍️', 'das Motorrad', 'Motorräder'], ['🚕', 'das Taxi', 'Taxis'],
-];
-// Für Schatten nur Fahrzeuge mit klar verschiedenem Umriss
-const DISTINCT = ['🚂', '✈️', '🚁', '🚗', '🚌', '🚲', '🚀', '⛵', '🚜', '🚢'];
-const OTHERS = ['🐶', '🐱', '🍎', '🍌', '🐘', '🌳', '⚽', '🧸', '🐟', '🌸', '🐄', '🍓'];
-const PAIRS = [['🚒', '🔥'], ['🚑', '🏥'], ['🚀', '🌙'], ['⛵', '🌊'], ['🚂', '🛤️'], ['🚜', '🌾'], ['✈️', '☁️'], ['🚌', '🚏']];
-const ROUTES = [['🚒', '🔥'], ['🚑', '🏥'], ['🚂', '🚉'], ['🚌', '🏫'], ['🚜', '🌾'], ['🚗', '🏠'], ['🚚', '🏭'], ['🚓', '🚦']];
-const PATHS = [
-  'M 100 300 C 300 40, 420 560, 620 300 S 840 100, 900 300',
-  'M 100 480 C 280 480, 240 130, 480 130 S 700 480, 900 460',
-  'M 100 130 L 360 130 C 540 130, 480 470, 660 470 L 900 470',
-  'M 100 300 C 200 60, 480 60, 500 300 S 800 540, 900 300',
-  'M 100 460 C 260 460, 300 300, 500 300 S 740 140, 900 140',
-];
-const SHAPES = {
-  kreis: ['#EF5B5B', '<circle cx="50" cy="50" r="44"/>'],
-  quadrat: ['#4EA5D9', '<rect x="9" y="9" width="82" height="82" rx="7"/>'],
-  dreieck: ['#5FB49C', '<polygon points="50,8 95,90 5,90" stroke-linejoin="round"/>'],
-  stern: ['#FFC857', `<polygon points="${starPoints()}"/>`],
-  herz: ['#9B7EDE', '<path d="M50 90 C 8 60, 2 30, 26 16 C 40 9, 50 20, 50 32 C 50 20, 60 9, 74 16 C 98 30, 92 60, 50 90 Z"/>'],
+/* ---------- Farben, Formen, Fahrzeuge (alles Vektor, nichts Gerastertes) ---------- */
+const C = { blau: '#1f4e9e', gruen: '#23744f', gelb: '#f4be0c', rot: '#cf2a22', tinte: '#171614', papier: '#faf9f6' };
+const T = C.tinte, P = C.papier;
+const FARBEN = ['blau', 'gruen', 'gelb', 'rot'];
+const FARBNAME = { blau: 'blaue', gruen: 'grüne', gelb: 'gelbe', rot: 'rote' };
+const FORM = {
+  kreis: '<circle cx="50" cy="50" r="42"/>',
+  quadrat: '<rect x="10" y="10" width="80" height="80"/>',
+  dreieck: '<polygon points="50,10 94,88 6,88"/>',
+  viertel: '<path d="M10 90V10A80 80 0 0 1 90 90Z"/>',
 };
-const NUMBERS = ['', 'Eins', 'Zwei', 'Drei', 'Vier', 'Fünf', 'Sechs', 'Sieben', 'Acht', 'Neun', 'Zehn'];
+const FORMEN = Object.keys(FORM);
+const FORMNAME = { kreis: 'Kreise', quadrat: 'Quadrate', dreieck: 'Dreiecke', viertel: 'Viertelkreise' };
+const svg = (inner, cls, vb) => `<svg viewBox="${vb || '0 0 100 100'}"${cls ? ` class="${cls}"` : ''}>${inner}</svg>`;
+const form = (k, farbe, t) => `<g fill="${C[farbe] || farbe}"${t ? ` transform="${t}"` : ''}>${FORM[k]}</g>`;
+const rad = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${T}"/><circle cx="${x}" cy="${y}" r="${r * .36}" fill="${P}"/>`;
+const box = (x, y, w, h, f) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"/>`;
+const poly = (pts, f) => `<polygon points="${pts}" fill="${f}"/>`;
 
-function starPoints() {
-  const p = [];
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 ? 20 : 47, a = Math.PI * i / 5 - Math.PI / 2;
-    p.push((50 + r * Math.cos(a)).toFixed(1) + ',' + (52 + r * Math.sin(a)).toFixed(1));
-  }
-  return p.join(' ');
-}
+const FAHRZEUGE = [
+  { name: 'das Auto', farbe: 'rot', bild: c => `<path d="M26 52A24 24 0 0 1 74 52Z" fill="${c}"/><path d="M34 52A16 16 0 0 1 66 52Z" fill="${P}"/>${box(48, 34, 4, 18, c)}${box(8, 52, 84, 20, c)}${rad(28, 74, 11)}${rad(72, 74, 11)}` },
+  { name: 'der Bus', farbe: 'gelb', bild: c => box(6, 28, 88, 44, c) + [14, 34, 54].map(x => box(x, 36, 14, 14, P)).join('') + box(76, 36, 10, 36, T) + rad(26, 74, 10) + rad(62, 74, 10) },
+  { name: 'die Lokomotive', farbe: 'blau', bild: c => box(50, 22, 34, 50, c) + box(58, 30, 18, 16, P) + box(12, 44, 38, 28, T) + box(20, 24, 10, 20, c) + poly('12,72 2,72 12,56', c) + rad(24, 76, 9) + rad(46, 76, 9) + rad(70, 74, 12) },
+  { name: 'der Lastwagen', farbe: 'gruen', bild: c => box(6, 30, 54, 42, c) + box(62, 44, 30, 28, T) + box(72, 50, 14, 10, P) + rad(22, 76, 10) + rad(46, 76, 10) + rad(78, 76, 10) },
+  { name: 'der Traktor', farbe: 'gruen', bild: c => box(12, 46, 46, 20, c) + box(48, 20, 30, 34, c) + box(54, 26, 18, 16, P) + box(20, 28, 6, 18, T) + rad(24, 76, 10) + rad(68, 68, 18) },
+  { name: 'das Segelboot', farbe: 'blau', bild: c => poly('8,64 92,64 78,84 22,84', T) + box(47, 10, 4, 54, T) + poly('55,12 55,58 90,58', c) + poly('43,26 43,58 16,58', c === C.gelb ? C.rot : C.gelb) },
+  { name: 'die Rakete', farbe: 'rot', bild: c => poly('50,6 66,34 34,34', T) + box(34, 34, 32, 40, c) + `<circle cx="50" cy="50" r="8" fill="${P}"/>` + poly('34,54 34,82 16,82', T) + poly('66,54 66,82 84,82', T) + poly('40,74 60,74 50,96', c === C.gelb ? C.rot : C.gelb) },
+  { name: 'das Flugzeug', farbe: 'blau', bild: c => `<rect x="6" y="42" width="84" height="18" rx="9" fill="${c}"/>` + poly('40,50 62,50 44,88 32,88', T) + poly('44,44 60,44 52,18 44,18', T) + poly('8,44 24,44 14,22 6,22', c) + `<circle cx="78" cy="50" r="4" fill="${P}"/>` },
+  { name: 'der Helikopter', farbe: 'gelb', bild: c => box(10, 24, 72, 4, T) + box(44, 28, 4, 10, T) + box(62, 54, 32, 6, c) + `<circle cx="46" cy="58" r="22" fill="${c}"/><path d="M46 58V40A18 18 0 0 0 28 58Z" fill="${P}"/><circle cx="92" cy="56" r="7" fill="${T}"/>` + box(34, 78, 4, 8, T) + box(54, 78, 4, 8, T) + box(24, 86, 46, 4, T) },
+  { name: 'das Velo', farbe: 'rot', bild: c => `<g fill="none" stroke-width="5"><g stroke="${T}"><circle cx="24" cy="66" r="18"/><circle cx="76" cy="66" r="18"/></g><g stroke="${c}"><polygon points="24,66 42,38 68,38 50,66"/><path d="M68 38L76 66M68 38V26M62 26H76M42 38V30M34 30H50"/></g></g>` },
+  { name: 'das Schiff', farbe: 'rot', bild: c => poly('4,58 96,58 84,82 14,82', c) + box(26, 42, 48, 16, T) + box(34, 22, 12, 20, c) + box(54, 22, 12, 20, c) + [36, 50, 64].map(x => `<circle cx="${x}" cy="50" r="3" fill="${P}"/>`).join('') },
+  { name: 'der Heissluftballon', farbe: 'rot', bild: c => `<circle cx="50" cy="38" r="32" fill="${c}"/><path d="M50 6A32 32 0 0 1 50 70Z" fill="${T}"/><path d="M30 63L42 80M70 63L58 80" stroke="${T}" stroke-width="3"/>` + box(40, 80, 20, 14, T) },
+];
+const fz = (v, farbe) => svg(v.bild(C[farbe || v.farbe]), 'fz');
+
+const PFEIL = d => `<polygon points="50,14 90,82 10,82" transform="rotate(${d * 90} 50 50)"/>`;
+const ICON = {
+  tonAn: `<polygon points="10,36 32,36 56,14 56,86 32,64 10,64" fill="${T}"/><path d="M68 30A24 24 0 0 1 68 70" fill="none" stroke="${T}" stroke-width="9"/>`,
+  tonAus: `<polygon points="10,36 32,36 56,14 56,86 32,64 10,64" fill="${T}"/><path d="M66 36L92 64M92 36L66 64" stroke="${C.rot}" stroke-width="9"/>`,
+  heim: poly('50,8 96,50 4,50', C.rot) + box(18, 50, 64, 40, T),
+  weiter: poly('8,36 52,36 52,12 94,50 52,88 52,64 8,64', P),
+  los: `<g fill="${P}">${PFEIL(1)}</g>`,
+  weg: box(8, 20, 84, 60, T) + `<path d="M36 36L64 64M64 36L36 64" stroke="${P}" stroke-width="9"/>`,
+};
 
 /* ---------- Helfer ---------- */
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random() * n);
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = (a, n) => shuffle(a).slice(0, n);
-const veh = e => VEHICLES.find(v => v[0] === e);
 function el(tag, cls, html) {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -57,11 +59,16 @@ function el(tag, cls, html) {
 function wobble(n) { n.classList.remove('wobble'); void n.offsetWidth; n.classList.add('wobble'); }
 
 /* ---------- Speicher ---------- */
-const S = { stars: 0, sound: true, hard: false };
-try { Object.assign(S, JSON.parse(localStorage.getItem('raetselbuch') || '{}')); } catch (e) {}
+const S = { stars: 0, sound: true, level: 0, at: 0 };
+try {
+  const old = JSON.parse(localStorage.getItem('raetselbuch') || '{}');
+  if (old.level == null && old.hard) old.level = 1;
+  delete old.hard;
+  Object.assign(S, old);
+} catch (e) {}
 function save() { try { localStorage.setItem('raetselbuch', JSON.stringify(S)); } catch (e) {} }
 
-/* ---------- Ton und Sprache ---------- */
+/* ---------- Ton ---------- */
 let ac;
 function tone(freq, at, dur, type, gain) {
   if (!S.sound) return;
@@ -80,400 +87,399 @@ function tone(freq, at, dur, type, gain) {
 const ok = () => { tone(660, 0, .15); tone(880, .1, .25); };
 const no = () => { tone(190, 0, .22, 'triangle', .12); };
 const win = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .12, .35, 'triangle'));
-function say(text) {
-  if (!S.sound || !text || !('speechSynthesis' in window)) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'de-DE'; u.rate = 0.9; u.pitch = 1.1;
-    speechSynthesis.speak(u);
-  } catch (e) {}
-}
+// Keine Stimme: die Aufgabe steht als Satz in der Kopfzeile
+function tell(text) { $('#hint').textContent = text || ''; }
 
-/* ---------- Ziehen ---------- */
-// Eigenschaft translate statt transform: sie wirkt ausserhalb der Vergrösserung beim Ziehen,
-// sonst läuft das Teil dem Finger davon und rastet versetzt ein.
-function setT(n, x, y) { n._t = [x, y]; n.style.translate = `${x}px ${y}px`; }
-function center(n) { const r = n.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
-function inside(n, x, y, pad) { const r = n.getBoundingClientRect(); return x > r.left - pad && x < r.right + pad && y > r.top - pad && y < r.bottom + pad; }
-// onDrop(x, y) liefert das Zielelement oder null
-function draggable(n, onDrop) {
-  let id = null, sx, sy, bx, by;
-  n.addEventListener('pointerdown', e => {
-    if (id !== null || n.classList.contains('locked')) return;
-    id = e.pointerId;
-    try { n.setPointerCapture(id); } catch (err) {}
-    [bx, by] = n._t || [0, 0]; sx = e.clientX; sy = e.clientY;
-    n.classList.remove('back'); n.classList.add('dragging');
+/* ---------- Gemeinsame Bausteine ---------- */
+let mode = null, queue = [], current = null, solved = false, frozen = false, round = 0;
+
+// Antippen zählt nur, solange das Rätsel offen und nicht gesperrt ist
+function tap(n, fn) { n.addEventListener('click', () => { if (!frozen && !solved) fn(); }); }
+// Falsche Antwort. Auf «schwer» gibt es kein Durchprobieren: es kommt ein neues Rätsel.
+function fail(n) {
+  no(); wobble(n);
+  if (S.level < 2) return;
+  frozen = true;
+  const r = round;
+  setTimeout(() => { if (r === round) show(current); }, 800);
+}
+// Auswahlreihe: genau eine Antwort stimmt
+function choose(stage, items, done, cls) {
+  stage.style.setProperty('--n', items.length);
+  const row = el('div', 'row');
+  shuffle(items).forEach(it => {
+    const b = el('button', 'pick ' + (cls || ''), it.html);
+    tap(b, () => { if (!it.right) return fail(b); b.classList.add('right'); ok(); done(b); });
+    row.append(b);
   });
-  n.addEventListener('pointermove', e => { if (e.pointerId === id) setT(n, bx + e.clientX - sx, by + e.clientY - sy); });
-  const up = e => {
-    if (e.pointerId !== id) return;
-    id = null; n.classList.remove('dragging');
-    const [cx, cy] = center(n), target = onDrop(cx, cy);
-    n.classList.add('back');
-    if (target) {
-      const [tx, ty] = center(target), [x, y] = n._t || [0, 0];
-      setT(n, x + tx - cx, y + ty - cy); n.classList.add('locked');
-    } else setT(n, 0, 0);
-  };
-  n.addEventListener('pointerup', up); n.addEventListener('pointercancel', up);
+  stage.append(row);
+}
+// Zufälliges Mosaik: count gefärbte Felder, jede Farbe kommt vor
+function muster(cols, rows, count, farben) {
+  const g = Array(cols * rows).fill('');
+  pick(g.map((_, i) => i), count).forEach((i, k) => { g[i] = farben[k % farben.length]; });
+  return g;
+}
+function bild(cols, rows, g) {
+  const b = el('div', 'mosaik', g.map(f => `<i${f ? ` style="background:${C[f]}"` : ''}></i>`).join(''));
+  b.style.setProperty('--cols', cols);
+  return b;
+}
+// Mosaik zum Ausmalen: Farbe wählen, Feld antippen (nochmals antippen löscht)
+function painter(cols, rows, farben, onChange) {
+  const b = el('div', 'mosaik malen'), pal = el('div', 'row palette'), val = Array(cols * rows).fill('');
+  b.style.setProperty('--cols', cols);
+  let cur = farben[0];
+  const cells = val.map((_, i) => {
+    const c = el('button');
+    tap(c, () => { val[i] = val[i] === cur ? '' : cur; c.style.background = val[i] ? C[val[i]] : ''; tone(440, 0, .05); onChange(val); });
+    b.append(c); return c;
+  });
+  const chips = farben.map(f => {
+    const c = el('button', 'farbe' + (f === cur ? ' sel' : '')); c.style.background = C[f];
+    tap(c, () => { cur = f; chips.forEach(o => o.classList.toggle('sel', o === c)); tone(520, 0, .05); });
+    pal.append(c); return c;
+  });
+  if (farben.length < 2) pal.hidden = true;
+  return { box: b, pal, clear() { val.fill(''); cells.forEach(c => { c.style.background = ''; }); } };
 }
 
 /* ---------- Rätsel ---------- */
-// Gemeinsame Mechanik: Teile unten auf Felder oben ziehen
-function match(stage, done, items, ordered) {
-  stage.style.setProperty('--n', items.length);
-  const top = el('div', 'row'), bottom = el('div', 'row');
-  let left = items.length;
-  const slots = (ordered ? items : shuffle(items)).map(it => {
-    const s = el('div', 'slot');
-    if (it.top) s.append(el('div', 'em', it.top));
-    s.append(el('div', 'slot-drop' + (it.ghost ? '' : ' dashed'), it.ghost || ''));
-    s._key = it.key; top.append(s); return s;
-  });
-  shuffle(items).forEach(it => {
-    const p = el('div', 'piece', it.piece);
-    draggable(p, (x, y) => {
-      const s = slots.find(s => inside(s, x, y, 12));
-      if (!s) return null;
-      if (s._key !== it.key || s._full) { no(); wobble(s); return null; }
-      s._full = true; s.classList.add('full'); ok();
-      if (it.name) say(it.name);
-      if (--left === 0) done();
-      return s.querySelector('.slot-drop');
-    });
-    bottom.append(p);
-  });
-  stage.append(top, bottom);
-}
-const svg = (inner, fill) => `<svg viewBox="0 0 100 100" ${fill ? `fill="${fill}"` : 'class="hole"'}>${inner}</svg>`;
-
 const KINDS = [
-  { id: 'schatten', title: 'Schatten', icon: '<span class="shadow" style="opacity:.6">🚁</span>', color: 'var(--violet)', say: 'Welcher Schatten passt?',
+  { id: 'memory', title: 'memory', color: 'blau', say: 'Finde die gleichen Paare.',
+    icon: box(8, 22, 38, 56, P) + box(54, 22, 38, 56, T) + `<circle cx="27" cy="50" r="11" fill="${T}"/>`,
     build(stage, done) {
-      match(stage, done, pick(DISTINCT, S.hard ? 4 : 3).map(e => ({ key: e, piece: `<span class="em">${e}</span>`, ghost: `<span class="em shadow">${e}</span>`, name: veh(e)[1] })));
-    } },
-  { id: 'paare', title: 'Was gehört zusammen?', icon: '🔥', color: 'var(--red)', say: 'Was gehört zusammen?',
-    build(stage, done) {
-      match(stage, done, pick(PAIRS, 3).map(([v, place]) => ({ key: v, piece: `<span class="em">${v}</span>`, top: place })));
-    } },
-  { id: 'formen', title: 'Formen', icon: '🔷', color: 'var(--blue)', say: 'Wo passen die Formen hinein?',
-    build(stage, done) {
-      match(stage, done, pick(Object.keys(SHAPES), 4).map(k => ({ key: k, piece: svg(SHAPES[k][1], SHAPES[k][0]), ghost: svg(SHAPES[k][1]) })));
-    } },
-  { id: 'memory', title: 'Memory', icon: '🎴', color: 'var(--green)', say: 'Finde die gleichen Paare.',
-    build(stage, done) {
-      const pairs = S.hard ? 6 : 3, box = el('div', 'memory' + (S.hard ? ' big' : ''));
-      let open = [], busy = false, left = pairs;
-      shuffle(pick(VEHICLES, pairs).flatMap(v => [v, v])).forEach(v => {
-        const c = el('button', 'card', `<div><i class="rear">?</i><i class="face">${v[0]}</i></div>`);
-        c.addEventListener('click', () => {
-          if (busy || c.classList.contains('open')) return;
-          c.classList.add('open'); tone(520, 0, .08); open.push([c, v]);
+      const L = S.level, pairs = [6, 8, 10][L], cols = L === 2 ? 5 : 4;
+      // Auf «schwer» gibt es jedes Fahrzeug in zwei Farben: genau hinschauen
+      const kinds = L === 2 ? pick(FAHRZEUGE, 5).flatMap(v => pick(FARBEN, 2).map(f => [v, f])) : pick(FAHRZEUGE, pairs).map(v => [v, v.farbe]);
+      const b = el('div', 'board');
+      b.style.setProperty('--cols', cols); b.style.setProperty('--rows', pairs * 2 / cols);
+      let open = [], left = pairs;
+      shuffle(kinds.flatMap(k => [k, k])).forEach(k => {
+        const c = el('button', 'card', `<i class="face">${fz(k[0], k[1])}</i>`);
+        tap(c, () => {
+          if (c.classList.contains('open')) return;
+          c.classList.add('open'); tone(520, 0, .08); open.push([c, k]);
           if (open.length < 2) return;
-          const [[a, va], [b, vb]] = open; open = [];
-          if (va === vb) {
-            a.classList.add('found'); b.classList.add('found'); ok(); say(va[1]);
+          const [[a, ka], [bb, kb]] = open; open = [];
+          if (ka === kb) {
+            a.classList.add('found'); bb.classList.add('found'); ok();
             if (--left === 0) done();
           } else {
-            busy = true;
-            setTimeout(() => { a.classList.remove('open'); b.classList.remove('open'); busy = false; }, 1000);
+            frozen = true;
+            const r = round;
+            setTimeout(() => { if (r !== round) return; a.classList.remove('open'); bb.classList.remove('open'); frozen = false; }, 800);
           }
         });
-        box.append(c);
+        b.append(c);
       });
-      stage.append(box);
-    } },
-  { id: 'fremd', title: 'Was passt nicht?', icon: '❓', color: 'var(--yellow)', say: 'Was passt nicht dazu?',
-    build(stage, done) {
-      const same = S.hard ? 5 : 3;
-      let items;
-      if (rnd(2)) items = [...pick(VEHICLES, same).map(v => [v[0], false]), [pick(OTHERS, 1)[0], true]];
-      else { const [a, b] = pick(VEHICLES, 2); items = [...Array(same).fill([a[0], false]), [b[0], true]]; }
-      const box = el('div', 'grid'); box.style.gridTemplateColumns = `repeat(${S.hard ? 3 : 2}, auto)`;
-      let solved = false;
-      shuffle(items).forEach(([e, odd]) => {
-        const b = el('button', 'pick em', e);
-        b.addEventListener('click', () => {
-          if (solved) return;
-          if (!odd) { no(); wobble(b); return; }
-          solved = true; b.classList.add('right'); ok(); done();
-        });
-        box.append(b);
-      });
-      stage.append(box);
-    } },
-  { id: 'finde', title: 'Suchen', icon: '🔍', color: 'var(--red)',
-    build(stage, done) {
-      const cols = S.hard ? 5 : 4, total = cols * (S.hard ? 4 : 3);
-      const [target, ...rest] = pick(VEHICLES, S.hard ? 9 : 6), n = (S.hard ? 5 : 3) + rnd(2);
-      const cells = shuffle([...Array(n).fill(target), ...Array.from({ length: total - n }, (_, i) => rest[i % rest.length])]);
-      const banner = el('div', 'banner', `<span>🔍</span><span>${target[0]}</span>` + '<span class="todo">⭐</span>'.repeat(n));
-      const todo = [...banner.querySelectorAll('.todo')];
-      const box = el('div', 'grid find' + (S.hard ? ' big' : '')); box.style.gridTemplateColumns = `repeat(${cols}, auto)`;
-      let found = 0;
-      cells.forEach(v => {
-        const b = el('button', 'pick em', v[0]);
-        b.style.rotate = (rnd(21) - 10) + 'deg';
-        b.addEventListener('click', () => {
-          if (b.classList.contains('right')) return;
-          if (v !== target) { no(); wobble(b); return; }
-          b.classList.add('right'); ok(); todo[found++].classList.add('ok');
-          if (found === n) done();
-        });
-        box.append(b);
-      });
-      stage.append(banner, box);
-      return 'Finde alle ' + target[2] + '.';
-    } },
-  { id: 'weg', title: 'Weg fahren', icon: '🛣️', color: 'var(--green)',
-    build(stage, done) {
-      const [car, goal] = pick(ROUTES, 1)[0], d = pick(PATHS, 1)[0], flip = rnd(2) === 1;
-      stage.innerHTML = `<svg class="weg" viewBox="0 0 1000 600">
-        <g ${flip ? 'transform="translate(0,600) scale(1,-1)"' : ''}>
-          <path class="road-edge" d="${d}"/><path class="road" d="${d}"/><path class="road-done" d="${d}"/><path class="road-line" d="${d}"/>
-        </g>
-        <text class="goal" dy=".35em">${goal}</text>
-        <g class="car"><text transform="scale(-1,1)" dy=".35em">${car}</text><text class="finger" x="10" y="120">👆</text></g>
-      </svg>`;
-      const s = stage.firstChild, road = s.querySelector('.road'), trail = s.querySelector('.road-done'), carG = s.querySelector('.car');
-      const L = road.getTotalLength(), N = 240;
-      const pts = Array.from({ length: N + 1 }, (_, i) => { const p = road.getPointAtLength(L * i / N); return [p.x, flip ? 600 - p.y : p.y]; });
-      const g = s.querySelector('.goal'); g.setAttribute('x', pts[N][0]); g.setAttribute('y', pts[N][1] - 20);
-      trail.style.strokeDasharray = L;
-      let cur = 0, active = false, finished = false;
-      const place = () => { carG.setAttribute('transform', `translate(${pts[cur][0]},${pts[cur][1] - 20})`); trail.style.strokeDashoffset = L * (1 - cur / N); };
-      place();
-      const move = e => {
-        if (!active || finished) return;
-        const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(s.getScreenCTM().inverse());
-        let best = -1, bd = 120;
-        for (let i = cur; i <= Math.min(N, cur + 34); i++) {
-          const dist = Math.hypot(pts[i][0] - q.x, pts[i][1] - q.y);
-          if (dist <= bd) { bd = dist; best = i; }
-        }
-        if (best <= cur) return;
-        if (cur === 0) { const f = s.querySelector('.finger'); if (f) f.remove(); }
-        cur = best; place();
-        if (cur >= N - 3) { cur = N; place(); finished = true; ok(); done(); }
-      };
-      s.addEventListener('pointerdown', e => { active = true; move(e); });
-      s.addEventListener('pointermove', move);
-      s.addEventListener('pointerup', () => { active = false; });
-      s.addEventListener('pointercancel', () => { active = false; });
-      return `Fahre ${veh(car)[1].replace(/^der /, 'den ')} ans Ziel.`;
-    } },
-  { id: 'zaehlen', title: 'Zählen', icon: '🔢', color: 'var(--blue)', say: 'Wie viele sind es?',
-    build(stage, done) {
-      stage.style.setProperty('--n', 3);
-      const max = S.hard ? 10 : 6, n = S.hard ? 4 + rnd(7) : 1 + rnd(5), v = pick(VEHICLES, 1)[0];
-      const area = el('div', 'count-area' + (n > 5 ? ' many' : ''), Array.from({ length: n }, (_, i) => `<span style="animation-delay:${i * .08}s">${v[0]}</span>`).join(''));
-      const opts = new Set([n]);
-      while (opts.size < 3) opts.add(Math.max(1, Math.min(max, n + rnd(5) - 2)));
-      const row = el('div', 'row');
-      let solved = false;
-      [...opts].sort((a, b) => a - b).forEach(k => {
-        const b = el('button', 'pick num', `${k}<small>${'●'.repeat(k)}</small>`);
-        b.addEventListener('click', () => {
-          if (solved) return;
-          if (k !== n) { no(); wobble(b); return; }
-          solved = true; b.classList.add('right'); ok(); say(NUMBERS[n] + '!'); done();
-        });
-        row.append(b);
-      });
-      stage.append(area, row);
-    } },
-  { id: 'puzzle', title: 'Puzzle', icon: '🧩', color: 'var(--violet)', say: 'Setze das Bild zusammen.',
-    build(stage, done) {
-      const v = pick(VEHICLES, 1)[0];
-      const inner = `<div class="jig-inner">${v[0]}</div>`;
-      const board = el('div', 'jig-board', inner), tray = el('div', 'row tray');
-      const cols = S.hard ? 3 : 2, rows = 2, ids = Array.from({ length: cols * rows }, (_, i) => i);
-      stage.style.setProperty('--gc', cols); stage.style.setProperty('--gr', rows);
-      const cells = ids.map(() => { const c = el('div', 'jig-cell'); board.append(c); return c; });
-      let left = ids.length;
-      shuffle(ids).forEach(i => {
-        const p = el('div', 'piece jig-piece', inner);
-        p.style.setProperty('--c', i % cols); p.style.setProperty('--r', Math.floor(i / cols));
-        draggable(p, (x, y) => {
-          if (!inside(board, x, y, 10)) return null;
-          if (!inside(cells[i], x, y, 14)) { no(); return null; }
-          ok();
-          if (--left === 0) { say(v[1]); done(); }
-          return cells[i];
-        });
-        tray.append(p);
-      });
-      stage.append(board, tray);
+      stage.append(b);
     } },
 
-  /* ---------- Schwierigere Arten ---------- */
-  { id: 'muster', title: 'Reihe', icon: '🔁', color: 'var(--yellow)', hard: true, say: 'Wie geht die Reihe weiter?',
+  { id: 'zwilling', title: 'zwillinge', color: 'rot', say: 'Zwei Bilder sind genau gleich. Finde sie.',
+    icon: `<circle cx="28" cy="50" r="20" fill="${P}"/><circle cx="72" cy="50" r="20" fill="${P}"/>` + box(21, 43, 14, 14, T) + box(65, 43, 14, 14, T),
     build(stage, done) {
-      const forms = S.hard ? [[0, 1], [0, 0, 1], [0, 1, 1], [0, 1, 2]] : [[0, 1]];
-      const form = pick(forms, 1)[0], vs = pick(VEHICLES, 4).map(v => v[0]), len = S.hard ? 6 : 5;
-      const seq = Array.from({ length: len }, (_, i) => vs[form[i % form.length]]);
-      const answer = vs[form[len % form.length]];
-      const series = el('div', 'series', seq.map(e => `<span>${e}</span>`).join('') + '<span class="gap">?</span>');
-      const used = [...new Set(form)].map(i => vs[i]);
+      const L = S.level, n = [9, 12, 20][L], cols = [3, 4, 5][L];
+      const outer = L === 2 ? pick(FORMEN, 2) : FORMEN, farben = L === 2 ? pick(FARBEN, 2) : FARBEN;
+      const inner = L === 0 ? ['', 'kreis', 'quadrat'] : ['kreis', 'quadrat', 'dreieck'];
+      const one = a => a[rnd(a.length)];
+      const set = new Set();
+      while (set.size < n - 1) set.add([one(outer), one(farben), one(inner), L ? one(['tinte', 'papier']) : 'tinte', L ? rnd(4) * 90 : 0].join('|'));
+      const keys = [...set];
+      const draw = key => {
+        const [o, oc, i, ic, rot] = key.split('|'), [x, y, s] = L ? [36, 68, .24] : [50, 60, .3];
+        return svg(`<g transform="rotate(${rot} 50 50)">${form(o, oc)}${i ? form(i, ic, `translate(${x - 50 * s} ${y - 50 * s}) scale(${s})`) : ''}</g>`);
+      };
+      const b = el('div', 'board');
+      b.style.setProperty('--cols', cols); b.style.setProperty('--rows', n / cols);
+      let sel = null;
+      shuffle([...keys, keys[0]]).forEach(key => {
+        const c = el('button', 'pick', draw(key));
+        tap(c, () => {
+          if (c === sel) { c.classList.remove('sel'); sel = null; return; }
+          if (!sel) { sel = c; c.classList.add('sel'); tone(520, 0, .06); return; }
+          const other = sel; sel = null; other.classList.remove('sel');
+          if (other._key !== key) { no(); wobble(c); wobble(other); return; }
+          c.classList.add('right'); other.classList.add('right'); ok(); done();
+        });
+        c._key = key; b.append(c);
+      });
+      stage.append(b);
+    } },
+
+  { id: 'schichten', title: 'schichten', color: 'gelb', say: 'Welche Form liegt zuunterst? Tippe die Formen von unten nach oben an.',
+    icon: box(10, 34, 46, 46, T) + `<circle cx="58" cy="44" r="26" fill="${P}"/>` + poly('66,40 92,84 40,84', T),
+    build(stage, done) {
+      const L = S.level, n = [3, 4, 5][L], step = [46, 38, 31][L], a = Math.random() * Math.PI * 2;
+      const items = shuffle([...FARBEN, 'tinte']).slice(0, n).map((f, i) => {
+        const d = (i - (n - 1) / 2) * step;
+        return { k: FORMEN[rnd(4)], f, rot: rnd(4) * 90, x: 150 + Math.cos(a) * d + rnd(17) - 8, y: 150 + Math.sin(a) * d + rnd(17) - 8 };
+      });
+      const pic = el('div', 'stapel', svg(items.map(it => form(it.k, it.f, `translate(${it.x - 65} ${it.y - 65}) scale(1.3) rotate(${it.rot} 50 50)`)).join(''), '', '0 0 300 300'));
+      stage.style.setProperty('--n', n);
       const row = el('div', 'row');
-      let solved = false;
-      shuffle([...used, ...vs.filter(v => !used.includes(v))].slice(0, 3)).forEach(e => {
-        const b = el('button', 'pick em', e);
-        b.addEventListener('click', () => {
-          if (solved) return;
-          if (e !== answer) { no(); wobble(b); return; }
-          solved = true; b.classList.add('right');
-          const gap = series.querySelector('.gap'); gap.textContent = e; gap.classList.add('filled');
-          ok(); done();
+      let p = 0;
+      const btns = [];
+      shuffle(items).forEach(it => {
+        const b = el('button', 'pick', svg(form(it.k, it.f, `rotate(${it.rot} 50 50)`)) + '<b></b>');
+        tap(b, () => {
+          if (b.classList.contains('right')) return;
+          if (it !== items[p]) {
+            no(); wobble(b);
+            if (L) { p = 0; btns.forEach(o => { o.classList.remove('right'); o.lastChild.textContent = ''; }); }
+            return;
+          }
+          b.classList.add('right'); b.lastChild.textContent = ++p; tone(440 + p * 60, 0, .1);
+          if (p === n) { ok(); done(); }
+        });
+        btns.push(b); row.append(b);
+      });
+      stage.append(pic, row);
+    } },
+
+  { id: 'spiegel', title: 'spiegel', color: 'gruen', say: 'Male das Spiegelbild auf die andere Seite der roten Linie.',
+    icon: `<path d="M42 22A28 28 0 0 0 42 78Z" fill="${T}"/>` + box(47, 8, 6, 84, P) + `<path d="M58 22A28 28 0 0 1 58 78Z" fill="${P}"/>`,
+    build(stage, done) {
+      const L = S.level, quer = L === 2 && rnd(2) === 1;
+      const W = quer ? 5 : [3, 4, 4][L], H = quer ? 3 : [4, 4, 5][L];
+      const farben = pick(['blau', 'gruen', 'gelb', 'tinte'], [1, 2, 3][L]);
+      const src = muster(W, H, [5, 7, 10][L], farben);
+      const target = src.map((_, i) => { const r = Math.floor(i / W), c = i % W; return quer ? src[(H - 1 - r) * W + c] : src[r * W + W - 1 - c]; });
+      stage.style.setProperty('--gc', quer ? W : 2 * W + 1); stage.style.setProperty('--gr', quer ? 2 * H + 1 : H);
+      const p = painter(W, H, farben, val => { if (String(val) === String(target)) { ok(); done(); } });
+      const wrap = el('div', 'spiegel' + (quer ? ' quer' : ''));
+      wrap.append(bild(W, H, src), el('i', 'achse'), p.box);
+      stage.append(wrap, p.pal);
+    } },
+
+  { id: 'bauplan', title: 'bauplan', color: 'blau',
+    icon: box(14, 14, 34, 34, P) + box(52, 14, 34, 34, T) + box(14, 52, 34, 34, T) + box(52, 52, 34, 34, P),
+    build(stage, done) {
+      const L = S.level, n = [3, 4, 5][L], count = [4, 6, 9][L], farben = pick(FARBEN, [1, 2, 3][L]), r = round;
+      const target = muster(n, n, count, farben), pic = bild(n, n, target);
+      stage.style.setProperty('--gc', n); stage.style.setProperty('--gr', n);
+      const p = painter(n, n, farben, val => {
+        if (String(val) === String(target)) { ok(); return done(); }
+        if (val.filter(Boolean).length >= count) { no(); wobble(p.box); setTimeout(() => { if (r === round) reveal(1800); }, 450); frozen = true; }
+      });
+      // Bild zeigen, dann verdecken: nachgebaut wird aus dem Kopf
+      function reveal(ms) {
+        frozen = true; p.clear();
+        p.box.hidden = true; p.pal.style.visibility = 'hidden'; pic.hidden = false;
+        setTimeout(() => {
+          if (r !== round) return;
+          pic.hidden = true; p.box.hidden = false; p.pal.style.visibility = ''; frozen = false;
+          tell('Baue das Bild aus dem Kopf nach.');
+        }, ms);
+      }
+      stage.append(pic, p.box, p.pal);
+      reveal([2600, 3200, 3800][L]);
+      return 'Merke dir das Bild.';
+    } },
+
+  { id: 'muster', title: 'muster', color: 'rot', say: 'Welches Bild fehlt im Muster?',
+    icon: [0, 1, 2].flatMap(r => [0, 1, 2].map(c => r === 2 && c === 2 ? box(68, 68, 20, 20, T) : `<circle cx="${22 + c * 28}" cy="${22 + r * 28}" r="10" fill="${P}"/>`)).join(''),
+    build(stage, done) {
+      const L = S.level, fs = pick(FORMEN, 3), cs = pick(FARBEN, 3), flip = rnd(2);
+      // leicht: Form je Zeile, Farbe je Spalte. mittel: dazu die Anzahl schräg. schwer: Form und Farbe wandern beide schräg.
+      const at = (r, c) => {
+        if (flip) [r, c] = [c, r];
+        return L === 0 ? [fs[r], cs[c], 1] : L === 1 ? [fs[r], cs[c], 1 + (r + c) % 3] : [fs[(r + c) % 3], cs[(r + 2 * c) % 3], 1 + c];
+      };
+      const draw = ([f, c, k]) => svg(L === 0 ? form(f, c, 'translate(14 14) scale(.72)') :
+        Array.from({ length: k }, (_, j) => form(f, c, `translate(${50 + (j - (k - 1) / 2) * 31 - 14} 36) scale(.28)`)).join(''));
+      const gap = L === 0 ? 8 : rnd(9), right = at(Math.floor(gap / 3), gap % 3);
+      const m = el('div', 'matrix');
+      for (let i = 0; i < 9; i++) m.append(el('div', i === gap ? 'gap' : '', i === gap ? '?' : draw(at(Math.floor(i / 3), i % 3))));
+      const wrong = new Map();
+      while (wrong.size < [3, 3, 5][L]) {
+        const w = [...right];
+        for (let t = 0; t < (L === 2 ? 1 + rnd(2) : 1); t++) {
+          const a = rnd(L ? 3 : 2);
+          w[a] = a === 0 ? fs[rnd(3)] : a === 1 ? cs[rnd(3)] : 1 + rnd(3);
+        }
+        if (String(w) !== String(right)) wrong.set(String(w), w);
+      }
+      stage.append(m);
+      choose(stage, [{ html: draw(right), right: true }, ...[...wrong.values()].map(w => ({ html: draw(w) }))], () => {
+        const g = m.querySelector('.gap'); g.innerHTML = draw(right); g.classList.add('filled');
+        done();
+      });
+    } },
+
+  { id: 'drehung', title: 'drehung', color: 'gelb', say: 'Welches Bild ist das gleiche, nur gedreht?',
+    icon: box(14, 14, 24, 72, T) + box(38, 62, 30, 24, T) + `<path d="M56 16A30 30 0 0 1 86 46" fill="none" stroke="${P}" stroke-width="8"/>` + poly('74,44 98,44 86,60', P),
+    build(stage, done) {
+      const L = S.level, n = [3, 3, 4][L], count = [4, 5, 7][L], farben = pick(FARBEN, [2, 2, 3][L]);
+      const rot = g => g.map((_, i) => g[(n - 1 - i % n) * n + Math.floor(i / n)]); // 90 Grad im Uhrzeigersinn
+      const mir = g => g.map((_, i) => g[Math.floor(i / n) * n + n - 1 - i % n]);
+      const all = g => { const o = []; for (let k = 0, h = g; k < 4; k++, h = rot(h)) o.push(h, mir(h)); return o; };
+      // Nur Bilder ohne Symmetrie: sonst wäre ein Spiegelbild auch eine Drehung
+      let g, forms;
+      do { g = muster(n, n, count, farben); forms = all(g); } while (new Set(forms.map(String)).size < 8);
+      const draw = h => svg(box(0, 0, n * 10, n * 10, P) + h.map((f, i) => {
+        if (!f) return '';
+        const x = i % n * 10, y = Math.floor(i / n) * 10;
+        return f === farben[0] ? `<circle cx="${x + 5}" cy="${y + 5}" r="5" fill="${C[f]}"/>` : box(x, y, 10, 10, C[f]);
+      }).join(''), 'gitter', `0 0 ${n * 10} ${n * 10}`);
+      const items = [{ html: draw(forms[2 * (1 + rnd(3))]), right: true }];
+      pick([1, 3, 5, 7], [2, 3, 3][L]).forEach(i => items.push({ html: draw(forms[i]) }));
+      if (L === 2) {
+        // Zwei Fälschungen: richtig gedreht, aber ein Feld ist verrutscht
+        const known = new Set(forms.map(String));
+        while (items.length < 6) {
+          const h = [...g], full = pick(h.map((f, i) => f ? i : -1).filter(i => i >= 0), 1)[0], empty = pick(h.map((f, i) => f ? -1 : i).filter(i => i >= 0), 1)[0];
+          h[empty] = h[full]; h[full] = '';
+          const v = all(h)[2 * rnd(4)];
+          if (!known.has(String(v))) { known.add(String(v)); items.push({ html: draw(v) }); }
+        }
+      }
+      stage.append(el('div', 'vorlage', draw(g)));
+      choose(stage, items, done);
+    } },
+
+  { id: 'fracht', title: 'fracht', color: 'gruen',
+    icon: box(10, 30, 80, 38, P) + rad(30, 74, 10) + rad(70, 74, 10) + [30, 50, 70].map(x => `<circle cx="${x}" cy="48" r="6" fill="${T}"/>`).join(''),
+    build(stage, done) {
+      const L = S.level, n = [4, 5, 6][L], [lo, hi] = [[1, 5], [2, 8], [3, 9]][L], take = [2, 2 + rnd(2), 3][L];
+      let vals;
+      do { vals = Array.from({ length: n }, () => lo + rnd(hi - lo + 1)); } while (new Set(vals).size < n - 1);
+      const target = pick(vals.map((_, i) => i), take).reduce((s, i) => s + vals[i], 0);
+      const dots = k => svg(Array.from({ length: k }, (_, i) => `<circle cx="${12 + i % 3 * 18}" cy="${12 + Math.floor(i / 3) * 18}" r="7" fill="${T}"/>`).join(''), 'punkte', '0 0 60 60');
+      stage.style.setProperty('--n', n);
+      const head = el('div', 'row zug', fz(FAHRZEUGE[2]) + `<span class="ziel">${target}</span>`);
+      const row = el('div', 'row');
+      const sel = new Set();
+      vals.forEach((v, i) => {
+        const b = el('button', 'pick wagen', L === 2 ? `<b>${v}</b>` : dots(v) + (L ? `<b>${v}</b>` : ''));
+        tap(b, () => {
+          if (sel.has(i)) { sel.delete(i); b.classList.remove('sel'); return; }
+          sel.add(i); b.classList.add('sel'); tone(440 + sel.size * 60, 0, .08);
+          const sum = [...sel].reduce((s, j) => s + vals[j], 0);
+          if (sum === target) { [...row.children].forEach((o, j) => { if (sel.has(j)) o.classList.add('right'); }); ok(); done(); }
+          else if (sum > target) { sel.clear(); [...row.children].forEach(o => o.classList.remove('sel')); fail(row); }
         });
         row.append(b);
       });
-      stage.append(series, row);
+      stage.append(head, row);
+      return `Welche Wagen ergeben zusammen genau ${target}? Tippe sie an.`;
     } },
-  { id: 'fehlt', title: 'Was fehlt?', icon: '👀', color: 'var(--violet)', hard: true, say: 'Schau genau hin und merke dir die Fahrzeuge.',
+
+  { id: 'kurier', title: 'kurier', color: 'blau', say: 'Tippe die Pfeile für den ganzen Weg zum gelben Kreis. Dann drücke auf Los.',
+    icon: box(10, 62, 24, 24, T) + `<path d="M22 62V26H62" fill="none" stroke="${P}" stroke-width="8"/><circle cx="76" cy="26" r="15" fill="${P}"/>`,
     build(stage, done) {
-      const n = S.hard ? 4 : 3;
-      stage.style.setProperty('--n', n);
-      const vs = pick(VEHICLES, n + 2), shown = vs.slice(0, n), gone = rnd(n);
-      const top = el('div', 'row'), bottom = el('div', 'row');
-      const cards = shown.map(v => { const c = el('div', 'pick em', v[0]); top.append(c); return c; });
-      bottom.style.visibility = 'hidden';
-      let solved = false;
-      shuffle([shown[gone], vs[n], vs[n + 1]]).forEach(v => {
-        const b = el('button', 'pick em', v[0]);
-        b.addEventListener('click', () => {
-          if (solved) return;
-          if (v !== shown[gone]) { no(); wobble(b); return; }
-          solved = true; b.classList.add('right');
-          cards[gone].textContent = v[0]; cards[gone].classList.add('right');
-          ok(); say(v[1]); done();
-        });
-        bottom.append(b);
-      });
-      stage.append(top, bottom);
-      // Erst anschauen lassen, dann zudecken und eines verschwinden lassen
-      setTimeout(() => {
-        if (!top.isConnected) return;
-        cards.forEach(c => c.classList.add('covered'));
-        setTimeout(() => {
-          if (!top.isConnected) return;
-          cards[gone].textContent = '❓';
-          cards.forEach(c => c.classList.remove('covered'));
-          bottom.style.visibility = '';
-          sentence = 'Was fehlt?'; say(sentence);
-        }, 900);
-      }, S.hard ? 4000 : 3500);
-    } },
-  { id: 'mehr', title: 'Wo sind mehr?', icon: '⚖️', color: 'var(--blue)', hard: true, say: 'Wo sind mehr?',
-    build(stage, done) {
-      const max = S.hard ? 9 : 5, a = 1 + rnd(max);
-      let b;
-      do { b = S.hard ? a + pick([-2, -1, 1, 2], 1)[0] : 1 + rnd(max); } while (b === a || b < 1 || b > max);
-      const vs = pick(VEHICLES, 2), row = el('div', 'row');
-      let solved = false;
-      [a, b].forEach((k, i) => {
-        const box = el('button', 'pick heap', `<span>${vs[i][0]}</span>`.repeat(k));
-        box.addEventListener('click', () => {
-          if (solved) return;
-          if (k < Math.max(a, b)) { no(); wobble(box); return; }
-          solved = true; box.classList.add('right'); ok(); say(NUMBERS[k] + '!'); done();
-        });
-        row.append(box);
-      });
-      stage.append(row);
-    } },
-  { id: 'groesse', title: 'Klein und gross', icon: '📏', color: 'var(--green)', hard: true, say: 'Ordne von klein nach gross.',
-    build(stage, done) {
-      const v = pick(VEHICLES, 1)[0], sizes = S.hard ? [.4, .6, .8, 1] : [.45, .72, 1];
-      match(stage, done, sizes.map(s => ({
-        key: s,
-        piece: `<span class="em" style="scale:${s}">${v[0]}</span>`,
-        ghost: `<span class="em shadow" style="scale:${s}">${v[0]}</span>`,
-      })), true);
-    } },
-  { id: 'labyrinth', title: 'Labyrinth', icon: '🌀', color: 'var(--red)', hard: true,
-    build(stage, done) {
-      const W = S.hard ? 6 : 4, H = S.hard ? 4 : 3, C = S.hard ? 150 : 200;
-      const grid = v => Array.from({ length: H }, () => Array(W).fill(v));
-      const right = grid(true), down = grid(true), seen = grid(false);
-      // Irrgarten mit genau einem Weg zwischen zwei Feldern (Tiefensuche)
-      const stack = [[0, 0]]; seen[0][0] = true;
-      while (stack.length) {
-        const [x, y] = stack[stack.length - 1];
-        const free = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < W && b < H && !seen[b][a]);
-        if (!free.length) { stack.pop(); continue; }
-        const [a, b] = free[rnd(free.length)];
-        if (a > x) right[y][x] = false; else if (a < x) right[y][a] = false; else if (b > y) down[y][x] = false; else down[b][x] = false;
-        seen[b][a] = true; stack.push([a, b]);
-      }
-      const open = (x, y, a, b) => a > x ? !right[y][x] : a < x ? !right[y][a] : b > y ? !down[y][x] : !down[b][x];
-      let walls = '';
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-        if (x < W - 1 && right[y][x]) walls += `M${(x + 1) * C} ${y * C}V${(y + 1) * C}`;
-        if (y < H - 1 && down[y][x]) walls += `M${x * C} ${(y + 1) * C}H${(x + 1) * C}`;
-      }
-      const [car, goal] = pick(ROUTES, 1)[0], start = [0, rnd(H)], end = [W - 1, rnd(H)];
-      const mid = ([x, y]) => [(x + .5) * C, (y + .5) * C];
-      stage.innerHTML = `<svg class="maze" viewBox="-20 -20 ${W * C + 40} ${H * C + 40}" font-size="${C * .62}">
-        <rect class="maze-bg" width="${W * C}" height="${H * C}" rx="24"/>
-        <polyline class="maze-trail" stroke-width="${C * .34}"/>
-        <path class="maze-walls" d="${walls}"/>
-        <rect class="maze-walls" width="${W * C}" height="${H * C}" rx="24"/>
-        <text x="${mid(end)[0]}" y="${mid(end)[1]}" dy=".35em">${goal}</text>
-        <g class="car"><text transform="scale(-1,1)" dy=".35em">${car}</text></g>
-      </svg>`;
-      const s = stage.firstChild, trail = s.querySelector('.maze-trail'), carG = s.querySelector('.car');
-      const path = [start];
-      let active = false, finished = false;
-      const draw = () => {
-        trail.setAttribute('points', path.map(c => mid(c).join(',')).join(' '));
-        carG.setAttribute('transform', `translate(${mid(path[path.length - 1]).join(',')})`);
-      };
+      const L = S.level, W = [4, 5, 6][L], H = [3, 4, 5][L], r = round;
+      const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+      const nb = (i, d) => { const x = i % W + DX[d], y = Math.floor(i / W) + DY[d]; return x < 0 || y < 0 || x >= W || y >= H ? -1 : y * W + x; };
+      let start, goal, blocked, dist;
+      do {
+        const cells = shuffle(Array.from({ length: W * H }, (_, i) => i));
+        [start, goal] = cells; blocked = new Set(cells.slice(2, 2 + [2, 5, 9][L]));
+        const d = new Map([[start, 0]]), q = [start];
+        for (let h = 0; h < q.length; h++) for (let k = 0; k < 4; k++) {
+          const j = nb(q[h], k);
+          if (j >= 0 && !blocked.has(j) && !d.has(j)) { d.set(j, d.get(q[h]) + 1); q.push(j); }
+        }
+        dist = d.get(goal);
+      } while (!(dist >= [4, 6, 9][L]));
+      const max = dist + [2, 1, 0][L], v = pick(FAHRZEUGE, 1)[0], xy = i => [i % W * 100, Math.floor(i / W) * 100];
+      let s = box(0, 0, W * 100, H * 100, P) + '<path class="linien" d="';
+      for (let x = 1; x < W; x++) s += `M${x * 100} 0V${H * 100}`;
+      for (let y = 1; y < H; y++) s += `M0 ${y * 100}H${W * 100}`;
+      s += '"/>' + [...blocked].map(i => box(...xy(i), 100, 100, T)).join('');
+      s += `<circle cx="${xy(goal)[0] + 50}" cy="${xy(goal)[1] + 50}" r="34" fill="${C.gelb}"/>`;
+      s += `<g class="kfz"><svg x="12" y="12" width="76" height="76" viewBox="0 0 100 100">${v.bild(C[v.farbe === 'gelb' ? 'rot' : v.farbe])}</svg></g>`;
+      s += `<rect class="rahmen" width="${W * 100}" height="${H * 100}"/>`;
+      const board = el('div', 'feld', svg(s, '', `0 0 ${W * 100} ${H * 100}`));
+      board.style.setProperty('--w', W); board.style.setProperty('--h', H);
+      const car = board.querySelector('.kfz');
+      const place = i => { const [x, y] = xy(i); car.style.transform = `translate(${x}px,${y}px)`; };
+      place(start);
+      const prog = [], slots = el('div', 'slots'), ctrl = el('div', 'row ctrl');
+      slots.style.setProperty('--n', max);
+      const draw = () => { slots.innerHTML = Array.from({ length: max }, (_, i) => `<i>${prog[i] != null ? svg(PFEIL(prog[i])) : ''}</i>`).join(''); };
       draw();
-      const move = e => {
-        if (!active || finished) return;
-        const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(s.getScreenCTM().inverse());
-        const a = Math.floor(q.x / C), b = Math.floor(q.y / C), [x, y] = path[path.length - 1];
-        if (a < 0 || b < 0 || a >= W || b >= H || Math.abs(a - x) + Math.abs(b - y) !== 1 || !open(x, y, a, b)) return;
-        const prev = path[path.length - 2];
-        if (prev && prev[0] === a && prev[1] === b) path.pop(); else path.push([a, b]);
-        draw();
-        if (a === end[0] && b === end[1]) { finished = true; ok(); done(); }
+      let running = false;
+      [3, 0, 2, 1].forEach(d => {
+        const b = el('button', 'btn', svg(PFEIL(d)));
+        tap(b, () => { if (running) return; if (prog.length >= max) { no(); wobble(slots); return; } prog.push(d); draw(); tone(480, 0, .05); });
+        ctrl.append(b);
+      });
+      const del = el('button', 'btn', svg(ICON.weg)), go = el('button', 'btn go', svg(ICON.los));
+      tap(del, () => { if (running) return; prog.pop(); draw(); });
+      tap(go, () => {
+        if (running || !prog.length) return;
+        running = true;
+        let pos = start, k = 0;
+        const step = () => {
+          if (r !== round) return;
+          const j = k < prog.length ? nb(pos, prog[k]) : -1;
+          if (j < 0 || blocked.has(j)) { // Wand, Rand oder Befehle zu Ende
+            no(); wobble(board);
+            setTimeout(() => { if (r !== round) return; place(start); if (L === 2) { prog.length = 0; draw(); } running = false; }, 700);
+            return;
+          }
+          pos = j; k++; place(pos); tone(330 + k * 30, 0, .08);
+          if (pos === goal) { ok(); done(); return; }
+          setTimeout(step, 360);
+        };
+        step();
+      });
+      ctrl.append(del, go);
+      stage.append(board, slots, ctrl);
+    } },
+
+  { id: 'inventur', title: 'inventur', color: 'rot',
+    icon: `<circle cx="26" cy="30" r="14" fill="${P}"/><circle cx="70" cy="66" r="14" fill="${P}"/><circle cx="30" cy="72" r="14" fill="${T}"/>` + poly('68,14 86,46 50,46', T),
+    build(stage, done) {
+      const L = S.level, total = [10, 16, 22][L], n = [3, 4, 5][L] + rnd([3, 4, 5][L]);
+      const tf = pick(FORMEN, 1)[0], tc = pick(FARBEN, 1)[0], of = FORMEN.filter(f => f !== tf), oc = FARBEN.filter(c => c !== tc);
+      const items = [];
+      const add = (f, c) => {
+        const s = L === 2 ? 26 + rnd(15) : [46, 38][L];
+        let x, y, t = 0;
+        do { x = s / 2 + 4 + Math.random() * (392 - s); y = s / 2 + 4 + Math.random() * (232 - s); }
+        while (++t < 400 && items.some(o => Math.hypot(o.x - x, o.y - y) < (o.s + s) / 2 * (L === 2 ? .9 : 1.1)));
+        items.push({ f, c, s, x, y, rot: L ? rnd(4) * 90 : 0 });
       };
-      s.addEventListener('pointerdown', e => { active = true; move(e); });
-      s.addEventListener('pointermove', move);
-      s.addEventListener('pointerup', () => { active = false; });
-      s.addEventListener('pointercancel', () => { active = false; });
-      return `Fahre ${veh(car)[1].replace(/^der /, 'den ')} durch das Labyrinth.`;
+      for (let i = 0; i < n; i++) add(tf, tc);
+      // Die übrigen gleichen dem Gesuchten in Form oder Farbe
+      for (let i = n; i < total; i++) i % 2 ? add(tf, oc[rnd(3)]) : add(of[rnd(3)], L ? tc : FARBEN[rnd(4)]);
+      const pic = el('div', 'lager', svg(shuffle(items).map(o => form(o.f, o.c, `translate(${o.x - o.s / 2} ${o.y - o.s / 2}) scale(${o.s / 100}) rotate(${o.rot} 50 50)`)).join(''), '', '0 0 400 240'));
+      // Aufeinanderfolgende Zahlen; die richtige steht an zufälliger Stelle, auch am Rand
+      const k = [3, 4, 5][L], first = Math.max(1, n - rnd(k)), opts = Array.from({ length: k }, (_, i) => first + i);
+      stage.append(el('div', 'frage', svg(form(tf, tc)) + '<b>?</b>'), pic);
+      choose(stage, opts.map(v => ({ html: `<b>${v}</b>`, right: v === n })), done, 'num');
+      // Zahlen bleiben in der Reihenfolge
+      const row = stage.lastChild;
+      [...row.children].sort((a, b) => a.textContent - b.textContent).forEach(b => row.append(b));
+      return `Wie viele ${FARBNAME[tc]} ${FORMNAME[tf]} zählst du?`;
     } },
 ];
 
 /* ---------- Ablauf ---------- */
 const home = $('#home'), play = $('#play'), stage = $('#stage'), cheer = $('#cheer');
-let mode = null, queue = [], current = null, sentence = '', solved = false, round = 0;
+const STUFEN = ['leicht', 'mittel', 'schwer'];
 
-function garageSize() { return Math.min(VEHICLES.length, Math.floor(S.stars / 3)); }
+function garageSize() { return Math.min(FAHRZEUGE.length, Math.floor(S.stars / 3)); }
 function refresh() {
   document.querySelectorAll('.starcount').forEach(n => { n.textContent = S.stars; });
-  $('#sound').textContent = S.sound ? '🔊' : '🔇';
-  $('#level').innerHTML = S.hard ? '🔥<b>Schwer</b>' : '🌱<b>Leicht</b>';
+  $('#sound').innerHTML = svg(S.sound ? ICON.tonAn : ICON.tonAus);
+  $('#level').innerHTML = `<span class="lv">${[0, 1, 2].map(i => `<i${i <= S.level ? ' class="on"' : ''}></i>`).join('')}</span><span>${STUFEN[S.level]}</span>`;
   const g = garageSize();
-  $('#garage').innerHTML = VEHICLES.map((v, i) => `<span class="${i < g ? '' : 'locked'}">${v[0]}</span>`).join('');
+  $('#garage').innerHTML = FAHRZEUGE.map((v, i) => `<span class="${i < g ? '' : 'locked'}">${fz(v)}</span>`).join('');
 }
 
 function show(kind) {
-  current = kind; solved = false; round++;
+  current = kind; solved = false; frozen = false; round++;
   cheer.hidden = true;
-  stage.innerHTML = ''; stage.removeAttribute('style');
-  sentence = kind.build(stage, onSolved) || kind.say;
+  stage.innerHTML = ''; stage.removeAttribute('style'); stage.className = kind.id;
+  tell(kind.build(stage, onSolved) || kind.say);
   $('#task').textContent = kind.title;
-  say(sentence);
 }
 function nextPuzzle() {
   if (mode !== 'mix') return show(mode);
-  if (!queue.length) { queue = shuffle(S.hard ? KINDS : KINDS.filter(k => !k.hard)); if (queue[0] === current) queue.push(queue.shift()); }
+  if (!queue.length) { queue = shuffle(KINDS); if (queue[0] === current) queue.push(queue.shift()); }
   show(queue.shift());
 }
 function onSolved() {
@@ -481,22 +487,22 @@ function onSolved() {
   solved = true;
   const before = garageSize();
   S.stars++; save(); refresh();
-  const gained = garageSize() > before ? VEHICLES[before] : null, r = round;
+  const gained = garageSize() > before ? FAHRZEUGE[before] : null, r = round;
   setTimeout(() => {
     if (r !== round) return; // inzwischen wurde weitergeblättert
     win(); confetti();
-    $('#prize').innerHTML = gained ? `${gained[0]}<small>Neu in deiner Garage!</small>` : '⭐';
+    $('#prize').innerHTML = gained ? `${fz(gained)}<small>neu in deiner garage</small>` : '<i class="dot"></i>';
     cheer.hidden = false;
     document.querySelectorAll('.stars').forEach(wobble);
-    if (gained) setTimeout(() => say('Neu in deiner Garage: ' + gained[1] + '!'), 700);
   }, 650);
 }
 function confetti() {
-  for (let i = 0; i < 16; i++) {
-    const c = el('span', 'confetti', pick(['⭐', '✨', '🎉', '🎈', '🌟'], 1)[0]);
-    const a = Math.random() * Math.PI * 2, r = 25 + Math.random() * 30;
-    c.style.setProperty('--dx', Math.cos(a) * r + 'vmin');
-    c.style.setProperty('--dy', Math.sin(a) * r + 'vmin');
+  for (let i = 0; i < 18; i++) {
+    const c = el('span', 'confetti ' + ['kreis', 'quadrat', 'dreieck'][i % 3]);
+    const a = Math.random() * Math.PI * 2, d = 25 + Math.random() * 30;
+    c.style.background = C[FARBEN[i % 4]];
+    c.style.setProperty('--dx', Math.cos(a) * d + 'vmin');
+    c.style.setProperty('--dy', Math.sin(a) * d + 'vmin');
     c.style.setProperty('--rot', rnd(360) - 180 + 'deg');
     play.append(c);
     setTimeout(() => c.remove(), 1400);
@@ -508,35 +514,86 @@ function start(m) {
   nextPuzzle();
 }
 
-// Startseite
-const tiles = $('#tiles');
-const mix = el('button', 'tile mix', '<span class="ico">📖</span><span>Alles gemischt</span>');
-mix.addEventListener('click', () => start('mix'));
-tiles.append(mix);
-KINDS.forEach(k => {
-  const t = el('button', 'tile', `<span class="ico">${k.icon}</span><span>${k.title}</span>`);
-  t.style.setProperty('--c', k.color);
-  t.addEventListener('click', () => start(k));
-  tiles.append(t);
-});
+// Hauptmenü: eine Insel mit Gleisring. Die Lok fährt zur angetippten Station, dort beginnt das Rätsel.
+const map = $('#map');
+let driving = false, lokAngle = 0;
+function buildMap() {
+  const hoch = innerHeight > innerWidth, VW = hoch ? 700 : 1000, VH = hoch ? 1000 : 700, cx = VW / 2, cy = VH / 2;
+  const [gx, gy] = hoch ? [176, 310] : [310, 168], [sx, sy] = hoch ? [262, 415] : [415, 268];
+  const ang = i => i / KINDS.length * Math.PI * 2 - Math.PI / 2;
+  let schwellen = '';
+  for (let i = 0; i < 64; i++) {
+    const a = i / 64 * Math.PI * 2, x = cx + gx * Math.cos(a), y = cy + gy * Math.sin(a);
+    const nx = gy * Math.cos(a), ny = gx * Math.sin(a), nl = Math.hypot(nx, ny) / 13;
+    schwellen += `M${x - nx / nl} ${y - ny / nl}L${x + nx / nl} ${y + ny / nl}`;
+  }
+  const stations = KINDS.map((k, i) => {
+    const a = ang(i), x = cx + sx * Math.cos(a), y = cy + sy * Math.sin(a), oben = Math.sin(a) < -.01;
+    return `<g class="station" data-i="${i}" transform="translate(${x - 48} ${y - 48})">${box(0, 0, 96, 96, C[k.color])}<svg x="12" y="12" width="72" height="72" viewBox="0 0 100 100">${k.icon}</svg><text x="48" y="${oben ? -10 : 119}">${k.title}</text></g>`;
+  }).join('');
+  map.innerHTML = svg(`
+    <rect x="6" y="6" width="${VW - 12}" height="${VH - 12}" rx="210" fill="${P}"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${gx}" ry="${gy}" fill="${C.gelb}"/>
+    <path d="${schwellen}" stroke="${T}" stroke-width="5"/>
+    <ellipse cx="${cx}" cy="${cy}" rx="${gx}" ry="${gy}" fill="none" stroke="${T}" stroke-width="6"/>
+    <g transform="translate(${cx} ${cy}) scale(${hoch ? .78 : 1})">
+      ${poly('-170,70 -96,-104 -22,70', C.rot)}${poly('-84,70 -24,-56 36,70', T)}
+      <path d="M176 70H86A90 90 0 0 1 176 -20Z" fill="${C.gruen}"/>${box(118, 22, 30, 48, C.blau)}
+      <g class="station" data-i="mix"><circle cx="40" cy="26" r="56" fill="${T}"/><circle cx="22" cy="14" r="20" fill="${C.rot}"/>${box(32, 14, 36, 36, C.blau)}${poly('12,58 36,16 60,58', C.gelb)}<text x="40" y="108">alles gemischt</text></g>
+    </g>
+    ${stations}
+    <g class="lok"><g transform="translate(-35 -57) scale(.7)"><g>${FAHRZEUGE[2].bild(C.blau)}</g></g></g>`, '', `0 0 ${VW} ${VH}`);
+  const lok = map.querySelector('.lok'), body = lok.firstChild.firstChild;
+  // Die Lok ist nach links gezeichnet; fährt sie nach rechts, wird sie gespiegelt
+  const put = (a, rechts) => {
+    lokAngle = a;
+    lok.setAttribute('transform', `translate(${cx + gx * Math.cos(a)} ${cy + gy * Math.sin(a)})`);
+    body.setAttribute('transform', rechts ? 'translate(100 0) scale(-1 1)' : '');
+  };
+  put(ang(S.at % KINDS.length), true);
+  const drive = (to, then) => {
+    const from = lokAngle, dur = Math.min(2600, 350 + Math.abs(to - from) * 650), t0 = performance.now();
+    if (Math.abs(to - from) < .01) return then();
+    driving = true; tone(392, 0, .18, 'triangle', .1); tone(392, .25, .3, 'triangle', .1);
+    const frame = now => {
+      if (!lok.isConnected) { driving = false; return; }
+      const t = Math.min(1, (now - t0) / dur), e = t < .5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t), a = from + (to - from) * e;
+      put(a, (Math.sin(a) < 0) === (to > from));
+      if (t < 1) return requestAnimationFrame(frame);
+      driving = false; then();
+    };
+    requestAnimationFrame(frame);
+  };
+  map.querySelectorAll('.station').forEach(g => g.addEventListener('click', () => {
+    if (driving) return;
+    // «alles gemischt»: eine ganze Runde um die Insel
+    if (g.dataset.i === 'mix') return drive(lokAngle + Math.PI * 2, () => start('mix'));
+    const i = +g.dataset.i;
+    let d = (ang(i) - lokAngle) % (Math.PI * 2);
+    if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
+    drive(lokAngle + d, () => { S.at = i; save(); start(KINDS[i]); });
+  }));
+}
+$('#back').innerHTML = svg(ICON.heim);
+$('#next').innerHTML = svg(ICON.weiter);
 
-$('#sound').addEventListener('click', () => { S.sound = !S.sound; save(); refresh(); if (S.sound) ok(); else if ('speechSynthesis' in window) speechSynthesis.cancel(); });
-$('#level').addEventListener('click', () => { S.hard = !S.hard; save(); refresh(); tone(S.hard ? 880 : 520, 0, .15); });
-$('#back').addEventListener('click', () => { round++; if ('speechSynthesis' in window) speechSynthesis.cancel(); play.hidden = true; home.hidden = false; });
-$('#again').addEventListener('click', () => say(sentence));
+$('#sound').addEventListener('click', () => { S.sound = !S.sound; save(); refresh(); if (S.sound) ok(); });
+$('#level').addEventListener('click', () => { S.level = (S.level + 1) % 3; save(); refresh(); tone(440 + S.level * 220, 0, .15); });
+$('#back').addEventListener('click', () => { round++; play.hidden = true; home.hidden = false; buildMap(); });
 $('#next').addEventListener('click', nextPuzzle);
 
-// Nach dem Drehen des iPads die Seite neu aufbauen (gezogene Teile stimmen sonst nicht mehr)
+// Nach dem Drehen des iPads die Seite neu aufbauen (die Grössen stimmen sonst nicht mehr)
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (!play.hidden && !solved && current) show(current); }, 250);
+  resizeTimer = setTimeout(() => { if (play.hidden) { if (!driving) buildMap(); } else if (!solved && current) show(current); }, 250);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
 
 refresh();
+buildMap();
 
 // Offline: lokal nur mit ?sw=1, damit beim Entwickeln nichts Altes aus dem Speicher kommt
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);

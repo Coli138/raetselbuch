@@ -1,6 +1,6 @@
 // Bei jeder Änderung an der App die Version hochzählen, damit das iPad die neuen Dateien holt.
-const CACHE = 'raetselbuch-v2';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'raetselbuch-v4';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

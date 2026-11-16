@@ -1,9 +1,19 @@
 // Bei jeder Änderung an der App die Version hochzählen, damit das iPad die neuen Dateien holt.
-const CACHE = 'raetselbuch-v5';
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'raetselbuch-v9';
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'welt.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
+
+// Aufnahmen und Flaggen der Weltkarte: eine Datei je Land und Kleinstaat.
+// Sie werden einzeln geholt; fehlt eine, läuft die App trotzdem (dann spricht die Gerätestimme).
+importScripts('welt.js');
+const EXTRA = [];
+WELT.l.forEach((_, i) => EXTRA.push(`ton/l${i}.m4a`));
+WELT.p.forEach((_, i) => EXTRA.push(`ton/p${i}.m4a`));
+[...WELT.l, ...WELT.p].forEach(c => EXTRA.push(`flaggen/${c[5]}.svg`));
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE)
+    .then(c => c.addAll(FILES).then(() => Promise.all(EXTRA.map(u => c.add(u).catch(() => {})))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

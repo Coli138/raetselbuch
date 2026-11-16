@@ -159,6 +159,19 @@ b { font-weight: 700; }
 #bau .go.stop { background: var(--red); border-color: var(--red); }
 #leeren.sicher { background: var(--red); border-color: var(--red); }
 
+/* ---------- Weltkarte ---------- */
+#karte { flex: 1; min-height: 0; background: #fff; touch-action: none; overflow: hidden; }
+#karte path { stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+#karte circle { fill: var(--ink); stroke: #fff; }
+#karte path.sel { stroke: var(--ink); stroke-width: 4px; }
+#karte circle.sel { fill: var(--yellow); stroke: var(--ink); }
+#winfo { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2.5vmin; }
+#winfo .aufgabe { flex: none; max-width: 100%; }
+#wflagge { height: 9vmin; width: 12vmin; flex: none; border: .4vmin solid var(--ink); object-fit: cover; }
+#welt .aufgabe b { font-size: 4.6vmin; }
+#welt .aufgabe span { font-size: 3vmin; }
+#welt .btn { font-size: 6vmin; line-height: 1; }
+
 /* ---------- Belohnung ---------- */
 #cheer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: center; gap: 5vmin; padding: 2.5vmin 3vmin calc(2.5vmin + env(safe-area-inset-bottom)); background: var(--yellow); border-top: var(--line) solid var(--ink); animation: rise .25s; }
 #prize { display: flex; align-items: center; gap: 2.5vmin; font-size: 3.6vmin; font-weight: 700; animation: pop .5s; }

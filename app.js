@@ -686,13 +686,111 @@ $('#bauheim').innerHTML = svg(ICON.heim);
 $('#bauheim').addEventListener('click', () => { anhalten(); bau.hidden = true; home.hidden = false; buildMap(); });
 function openBau() { home.hidden = true; bau.hidden = false; zeichneBrett(); zeichneLeiste(); }
 
+/* ---------- Weltkarte: Land antippen, Name und Hauptstadt werden gezeigt und gesagt ---------- */
+const WELTK = { id: 'welt', title: 'weltkarte', color: 'blau', icon: `<circle cx="50" cy="50" r="40" fill="${P}"/><path d="M50 10A40 40 0 0 0 50 90A22 40 0 0 1 50 10Z" fill="${C.gelb}"/>` + box(10, 47, 80, 6, T) };
+const welt = $('#welt'), karte = $('#karte'), WFARBE = ['blau', 'gruen', 'gelb', 'rot'];
+let wv = [0, 0, WELT.w], wahl = null, wtext = '', wkey = '';
+// Ersatzstimme des Geräts, falls eine Aufnahme fehlt
+function sprich(text) {
+  if (!S.sound || !text || !('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'de-DE'; u.rate = .9; speechSynthesis.speak(u); } catch (e) {}
+}
+// Jedes Land hat eine fertige Aufnahme (ton/l12.m4a, ton/p3.m4a). Sie folgt dem Ton-Knopf der Startseite.
+const aufnahmen = new Map();
+let sagLauf = 0, quelle = null;
+function schweig() { sagLauf++; if (quelle) { try { quelle.stop(); } catch (e) {} quelle = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+async function sage(key, text) {
+  schweig();
+  if (!S.sound || !key) return;
+  const lauf = sagLauf;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    let buf = aufnahmen.get(key);
+    if (!buf) {
+      const r = await fetch('ton/' + key + '.m4a');
+      if (!r.ok) throw new Error('fehlt');
+      buf = await ac.decodeAudioData(await r.arrayBuffer()); aufnahmen.set(key, buf);
+    }
+    if (lauf !== sagLauf) return;
+    quelle = ac.createBufferSource(); quelle.buffer = buf; quelle.connect(ac.destination); quelle.start();
+  } catch (e) { if (lauf === sagLauf) sprich(text); }
+}
+function sicht(x, y, w) {
+  const r = karte.getBoundingClientRect(), q = r.height / r.width, max = Math.max(WELT.w, WELT.h / q);
+  w = Math.max(WELT.w / 16, Math.min(max, w));
+  const h = w * q, klemme = (v, len, ganz) => len >= ganz ? (ganz - len) / 2 : Math.max(0, Math.min(ganz - len, v));
+  wv = [klemme(x, w, WELT.w), klemme(y, h, WELT.h), w];
+  const s = karte.firstChild;
+  s.setAttribute('viewBox', `${wv[0]} ${wv[1]} ${w} ${h}`);
+  // Die Punkte der Kleinstaaten bleiben auf dem Bildschirm gleich gross
+  const k = w / r.width;
+  s.querySelectorAll('circle').forEach(c => { c.setAttribute('r', 8 * k); c.setAttribute('stroke-width', 2.5 * k); });
+}
+function zoom(f, cx, cy) {
+  const r = karte.getBoundingClientRect(), k = wv[2] / r.width, mx = wv[0] + (cx - r.left) * k, my = wv[1] + (cy - r.top) * k;
+  const w = Math.max(WELT.w / 16, Math.min(Math.max(WELT.w, WELT.h * r.width / r.height), wv[2] * f)), k2 = w / r.width;
+  sicht(mx - (cx - r.left) * k2, my - (cy - r.top) * k2, w);
+}
+function waehle(n) {
+  if (wahl) wahl.classList.remove('sel');
+  wahl = n; n.classList.add('sel');
+  if (n.tagName === 'path') n.parentNode.append(n); // nach vorne, damit der Rand ganz sichtbar ist
+  const c = n.dataset.p != null ? WELT.p[n.dataset.p] : WELT.l[n.dataset.i], hinweis = c[4] || '';
+  $('#wname').textContent = c[0];
+  const fl = $('#wflagge'); fl.src = 'flaggen/' + c[5] + '.svg'; fl.hidden = false;
+  $('#whaupt').textContent = hinweis || 'Hauptstadt: ' + c[1];
+  wtext = c[0] + '. ' + (hinweis ? hinweis : 'Hauptstadt: ' + c[1]) + '.';
+  wkey = n.dataset.p != null ? 'p' + n.dataset.p : 'l' + n.dataset.i;
+  sage(wkey, wtext);
+}
+function openWelt() {
+  home.hidden = true; welt.hidden = false;
+  if (!karte.firstChild) karte.innerHTML = svg(
+    `<clipPath id="wrand"><rect width="${WELT.w}" height="${WELT.h}"/></clipPath><g clip-path="url(#wrand)">${WELT.l.map((c, i) => `<path data-i="${i}" d="${c[3]}" fill="${c[2] === 4 ? GRAU : C[WFARBE[c[2]]]}"/>`).join('')}</g>` +
+    WELT.p.map((c, i) => `<circle data-p="${i}" cx="${c[2]}" cy="${c[3]}" r="3"/>`).join(''), '', `0 0 ${WELT.w} ${WELT.h}`);
+  sicht(0, 0, 1e9);
+}
+// Ein Finger schiebt, zwei Finger zoomen, kurzes Antippen wählt
+const finger = new Map();
+let bewegt = false, abstand = 0;
+karte.addEventListener('pointerdown', e => { finger.set(e.pointerId, [e.clientX, e.clientY]); if (finger.size === 1) bewegt = false; else { bewegt = true; abstand = 0; } });
+karte.addEventListener('pointermove', e => {
+  const alt = finger.get(e.pointerId);
+  if (!alt) return;
+  finger.set(e.pointerId, [e.clientX, e.clientY]);
+  const k = wv[2] / karte.getBoundingClientRect().width;
+  if (finger.size === 1) {
+    if (Math.hypot(e.clientX - alt[0], e.clientY - alt[1]) > 0) { if (!bewegt && Math.hypot(e.clientX - alt[0], e.clientY - alt[1]) < 4) return void finger.set(e.pointerId, alt); bewegt = true; sicht(wv[0] - (e.clientX - alt[0]) * k, wv[1] - (e.clientY - alt[1]) * k, wv[2]); }
+  } else if (finger.size === 2) {
+    const [a, b] = [...finger.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+    if (abstand && d) zoom(abstand / d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    abstand = d;
+  }
+});
+const los_ = e => {
+  if (!finger.delete(e.pointerId)) return;
+  abstand = 0;
+  if (bewegt || e.type !== 'pointerup') return;
+  const n = document.elementFromPoint(e.clientX, e.clientY);
+  if (n && karte.contains(n) && (n.dataset.i != null || n.dataset.p != null)) waehle(n);
+};
+['pointerup', 'pointercancel', 'pointerleave'].forEach(n => karte.addEventListener(n, los_));
+karte.addEventListener('wheel', e => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.2 : 1 / 1.2, e.clientX, e.clientY); }, { passive: false });
+const mitte = f => { const r = karte.getBoundingClientRect(); zoom(f, r.left + r.width / 2, r.top + r.height / 2); };
+$('#wplus').addEventListener('click', () => mitte(1 / 1.6));
+$('#wminus').addEventListener('click', () => mitte(1.6));
+$('#winfo').addEventListener('click', () => sage(wkey, wtext));
+$('#weltheim').innerHTML = svg(ICON.heim);
+$('#weltheim').addEventListener('click', () => { schweig(); welt.hidden = true; home.hidden = false; buildMap(); });
+
 // Hauptmenü: eine Insel mit Gleisring. Die Lok fährt zur angetippten Station, dort beginnt das Rätsel.
 const map = $('#map');
 let driving = false, lokAngle = 0;
 function buildMap() {
   const hoch = innerHeight > innerWidth, VW = hoch ? 700 : 1000, VH = hoch ? 1000 : 700, cx = VW / 2, cy = VH / 2;
   const [gx, gy] = hoch ? [176, 310] : [310, 168], [sx, sy] = hoch ? [262, 415] : [415, 268];
-  const ORTE = [...KINDS, BAU], ang = i => i / ORTE.length * Math.PI * 2 - Math.PI / 2;
+  const ORTE = [...KINDS, BAU, WELTK], ang = i => i / ORTE.length * Math.PI * 2 - Math.PI / 2;
   let schwellen = '';
   for (let i = 0; i < 64; i++) {
     const a = i / 64 * Math.PI * 2, x = cx + gx * Math.cos(a), y = cy + gy * Math.sin(a);
@@ -743,7 +841,7 @@ function buildMap() {
     const i = +g.dataset.i;
     let d = (ang(i) - lokAngle) % (Math.PI * 2);
     if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
-    drive(lokAngle + d, () => { S.at = i; save(); if (ORTE[i] === BAU) openBau(); else start(ORTE[i]); });
+    drive(lokAngle + d, () => { S.at = i; save(); if (ORTE[i] === BAU) openBau(); else if (ORTE[i] === WELTK) openWelt(); else start(ORTE[i]); });
   }));
 }
 $('#back').innerHTML = svg(ICON.heim);
@@ -758,7 +856,7 @@ $('#next').addEventListener('click', nextPuzzle);
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (!home.hidden) { if (!driving) buildMap(); } else if (play.hidden) return; else if (!solved && current) show(current); }, 250);
+  resizeTimer = setTimeout(() => { if (!home.hidden) { if (!driving) buildMap(); } else if (!welt.hidden) sicht(wv[0], wv[1], wv[2]); else if (play.hidden) return; else if (!solved && current) show(current); }, 250);
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
